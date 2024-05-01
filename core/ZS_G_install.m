@@ -7,8 +7,8 @@ try
     % Add the path of ZSROOT
     addpath(genpath(ROOT), '-begin');
     rmpath(genpath(fullfile(ROOT,'Interfaces')))
-
     status = savepath;
+
     if status
         fprintf(['Warning: the ZS+G installer could not be save the MATLAB path.\n' ...
             'Please make sure that the MATLAB startup folder is set to a writable location in the MATLAB preferences:\n'...

@@ -303,7 +303,6 @@ methods
         return
     end
 
-
     % Check for Mapping.Type
     if ~isfield(opts.Mapping,'Type')
         opts.Mapping.Type = 'Rectangular'; % Default value
@@ -324,6 +323,20 @@ methods
         self.Summary(end+1) = 0;
         return
     end
+
+    % for an isoprobabilistic mapping, all basis vectors must be 'linspace'
+    test_1 = all(cellfun(@(x) strcmp(x,'linspace'),self.Basis.opts.Family));
+
+    if strcmp(opts.Mapping.Type,'Isoprobabilistic')
+        if ~test_1
+            self.Mapping.check  = false;
+            self.Mapping.error  = "When using isoprobabilistic mapping, all basis vectors must be 'linspace'.";
+            self.Summary(end+1) = 0;
+            return
+        end
+    end
+
+
 
     % Check for Mapping.CI
     if ~isfield(opts.Mapping,'CI')

@@ -79,14 +79,16 @@ methods
     mapping         = self.Internal.Validation.Mapping.opts.Type;
     [support,level] = self.get_credible_interval(Input,alpha);
 
-    if strcmp(mapping,'Rectangular')
+    if strcmp(mapping,'Rectangular') || isnan(level)
         
         grid = self.map_stretch(self.Internal.Grid.Unit_grid,support);
         grid = self.map_translate(grid,support);
 
     elseif strcmp(mapping,'Isoprobabilistic')
 
-        grid = self.map_circular(self.Internal.Grid.Unit_grid); % Map the grid on a unit circle
+        grid = self.map_equidistributed(self.Internal.Grid.Unit_grid); % Map the grid on tan(pi/4*x)
+
+        grid = self.map_circular(grid); % Map the grid on a unit circle
         self.Internal.Grid.Mapping.Circular.Unit = grid;
 
         OPTS.Marginals = uq_Marginals(d, 'Gaussian', [0,1]); % Define the standardized Gaussian space (zero-mean, unit variance)
@@ -123,6 +125,10 @@ methods
         support = self.Internal.Grid.Mapping.Support;
         Input   = self.Internal.Grid.Mapping.RandomVector;
         level   = self.Internal.Grid.Mapping.Level;
+
+        if isnan(level)
+            level = 0;
+        end
 
         if self.Internal.Grid.Dimensions(2) == 2
 
@@ -253,21 +259,40 @@ methods (Static)
         n = round(n_req);
     end
 
-    % First draw some sample from the random vector
-    X = uq_getSample(uq_input,n);
-    % Then evaluate the PDF
-    f = uq_evalPDF(X, uq_input);
-    % Numercial integration over Sl is driven the Monte-Carlo method
-    fun = @(x) MCS(x,alpha,f);
-    % Now find the correpoding level by solving 
-    %opts = optimset('Display','iter'); % show iterations
-    [level,~,~,solver_ouput] = fzero(fun,[0+eps max(f,[],'all')]);
-    % sanity check in 2d : l = alpha/(2*pi*sig1*sig2);
-    % Select the points inside of the region
-    index = f>level;
-    % Make the hypercube of the boundary points
-    [minA,MaxA] = bounds(X(index,:),1);
-    support = [minA;MaxA]';
+    % The solver does not work if all distributions are uniform, skip in
+    % this case
+    index = ZS_Grid.get_all_uniform(uq_input);
+    param = {uq_input.Marginals.Parameters}';
+    param = cell2mat(param);
+
+    if all(index)
+
+        support = param;
+        level   = NaN;
+
+    else
+
+        % First draw some sample from the random vector
+        X = uq_getSample(uq_input,n);
+        % Then evaluate the PDF
+        f = uq_evalPDF(X, uq_input);
+        % Numercial integration over Sl is driven the Monte-Carlo method
+        fun = @(x) MCS(x,alpha,f);
+        % Now find the correpoding level by solving 
+        %opts = optimset('Display','iter'); % show iterations
+        [level,~,~,solver_ouput] = fzero(fun,[0+eps max(f,[],'all')]);
+        % sanity check in 2d : l = alpha/(2*pi*sig1*sig2);
+        % Select the points inside of the region
+        index_level = f>level;
+        % Make the hypercube of the boundary points
+        [minA,MaxA] = bounds(X(index_level,:),1);
+        support = [minA;MaxA]';
+    
+        % Overwrite the support if the input is 'uniform' (for accuracy)
+        support(index,:) = param(index,:);
+    end
+
+    
 
     function out = MCS(level,ci,f)
         N = size(f,1);
@@ -277,6 +302,17 @@ methods (Static)
         out = N_fail/N - ci;
     end
 
+    end
+
+    function index = get_all_uniform(uq_input)
+    %-------------------------------------------------------------------------------
+    % Name:           get_all_uniform
+    % Purpose:        Check if all marginals are uniform and return their
+    %                 positions
+    % Last Update:    01.05.2024
+    %-------------------------------------------------------------------------------
+    dist  = {uq_input.Marginals.Type};
+    index = (cellfun(@(x) strcmp(x,'Uniform'),dist))';
     end
 
     function mapped_grid = map_stretch(grid,support)
@@ -320,6 +356,16 @@ methods (Static)
 
     % And map
     mapped_grid = (grid + A)';
+    end
+
+    function mapped_grid = map_equidistributed(grid)
+    %-------------------------------------------------------------------------------
+    % Name:           map_equidistributed
+    % Purpose:        Initial map of the grid, such that the grid is then equidistributed
+    %                 on the hypersphere.
+    % Last Update:    01.05.2024
+    %-------------------------------------------------------------------------------
+    mapped_grid = tan(pi/4*grid);
     end
 
     function mapped_grid = map_circular(grid)
