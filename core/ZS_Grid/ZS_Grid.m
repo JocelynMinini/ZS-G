@@ -8,6 +8,7 @@ classdef ZS_Grid < dynamicprops
 properties
     Grid
     Internal
+    Options
 end
 
 methods
@@ -18,7 +19,7 @@ methods
     % Purpose:        Constructor
     % Last Update:    06.03.2024
     %-------------------------------------------------------------------------------
-   
+    self.Options = opts;   
     % First of all, check user arguments
     self.Internal.Validation = ZS_Validation(opts);
     summary = logical(self.Internal.Validation.Summary);
@@ -35,7 +36,7 @@ methods
         error('foo:bar',Message)
     end
 
-    % Then create the unidimensional vectors object
+    % Then create the unit grid
     self = self.create_grid;
 
     % Try to put a name
@@ -218,7 +219,7 @@ methods
     class = self.Internal.Grid.Class;
 
     if strcmp(class,'FullTensor')
-        error("FullTensor grids do not generate set of multi-indices")
+        error("FullTensor grids do not need set of multi-indices")
         return
     end
 

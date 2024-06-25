@@ -148,7 +148,6 @@ methods
     % Last Update:    06.03.2024
     %-------------------------------------------------------------------------------
     d     = self.Grid.opts.D;
-    mu    = self.Grid.opts.Level;
     class = self.Grid.opts.Class;
 
     % default arg for Basis in general
@@ -167,10 +166,10 @@ methods
     if ~isfield(opts.Basis,'Growth')
         if strcmp(class,'FullTensor')
             C    = cell(1, d);
-            C(:) = {'n'};
+            C(:) = { @(k) k };
         elseif strcmp(class,'Sparse')
             C    = cell(1, d);
-            C(:) = {'2^n+1'};
+            C(:) = { @(k) 2^k+1};
         end
         opts.Basis.Growth = C;
     end
@@ -197,7 +196,7 @@ methods
     end
 
     % for growth
-    if ischar(opts.Basis.Growth)
+    if isa(opts.Basis.Growth,'function_handle')
         expr = opts.Basis.Growth;
         C    = cell(1, d);
         C(:) = {expr};
@@ -234,7 +233,7 @@ methods
     end
 
     % check data for growth : type and size
-    [success,ErrMsg] = self.check_cell(opts.Basis.Growth, {'char'}, {{1,d}}, "Field 'Basis.Growth' must be given as a (1 x D) cell array containing characters");
+    [success,ErrMsg] = self.check_cell(opts.Basis.Growth, {'function_handle'}, {{1,d}}, "Field 'Basis.Growth' must be given as a (1 x D) cell array containing handle functions");
     if ~success
         self.Basis.check     = false;
         self.Basis.error     = ErrMsg;

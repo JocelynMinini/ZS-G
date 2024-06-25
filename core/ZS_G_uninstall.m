@@ -21,9 +21,16 @@ try
     delete(fullfile(ROOT,'DEPENDENCIES'))
 
     % remove the path of ZSROOT
-
     rmpath(genpath(fullfile(ROOT)))
-    savepath
+
+    status = savepath;
+
+    if status ~= 0
+        error(['Warning: the ZS+G uninstaller could not save the MATLAB path.\n' ...
+            'Please make sure that the MATLAB startup folder is set to a writable location in the MATLAB preferences:\n'...
+            'Preferences->General->Initial Working Folder\n'
+            ]);
+    end
 
     clc
    
