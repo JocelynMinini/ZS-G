@@ -43,7 +43,7 @@ clear OPTS
 count = count + 1;
 
 % gfunc
-d = 2;
+d = 4;
 OPTS.Marginals = uq_Marginals(d, 'Uniform', [0,1]);
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
