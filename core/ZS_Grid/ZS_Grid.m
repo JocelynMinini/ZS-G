@@ -95,7 +95,9 @@ methods
         OPTS.Marginals = uq_Marginals(d, 'Gaussian', [0,1]); % Define the standardized Gaussian space (zero-mean, unit variance)
         U_Input = uq_createInput(OPTS,'-private');
 
-        U_support = self.get_credible_interval(U_Input,alpha); % Compute the level bounding the Sl domain
+        [U_support,U_level] = self.get_credible_interval(U_Input,alpha); % Compute the level bounding the Sl domain
+        self.Internal.Grid.Mapping.Circular.Support = U_support;
+        self.Internal.Grid.Mapping.Circular.Level   = U_level;
 
         grid = self.map_stretch(grid,U_support);
         grid = self.map_translate(grid,U_support);

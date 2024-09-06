@@ -3,27 +3,169 @@ clear all
 uqlab
 ZS_G
 addpath(genpath('C:\Users\jocelyn.minini\switchdrive\MetaG\4_MATLAB\ZS+G\Examples'))
-warning('off','all')
 
-myCluster = parcluster('local');
-myCluster.NumWorkers = 8;
-p = parpool(myCluster);
+try
+    p = parpool;
+end
+
+
+warning ('off','all');
+
+clc
 
 % Load all models and inputs
 All_Inputs = ZS_createInput_fun;
 All_Models = ZS_createModel_fun;
 
-index = [1 2 3 5 6 7 8 9];
+% model iterations
+model_names = fieldnames(All_Models);
+model_index = [3 5 6 9 4];
+model_index = [9 4];
+
+% solver iteration
+metaType = 'PCE';
+switch metaType
+    case 'PCE'
+        solver_names = {'OLS'};
+    case 'Kriging'
+        solver_names = {'ordinary'};
+    otherwise
+        %
+end
+
+for k = model_index
+for j = 1:length(solver_names)
+
+
+model    = model_names{k};
+family   = 'leja';
+bounds   = 'true';
+solver   = solver_names{j};
+d        = length(All_Inputs.(model).Marginals);
+
+switch family
+    case 'linspace'
+        if eval(bounds)
+            growth = @(k) 2.^k+1;
+        else
+            growth = @(k) 2.^k-1;
+        end
+    case 'chebyshev_2'
+        growth = @(k) 2.^k+1;
+    case 'leja'
+        growth = @(k) 2.*k-1;
+end
+
+
+
+fprintf('### Starting calculation ###\n\n')
+fprintf(' - Model     : %s\n',model)
+fprintf(' - MetaType  : %s\n',metaType)
+fprintf(' - Family    : %s\n',family)
+fprintf(' - Bounds    : %s\n',bounds)
+fprintf(' - Solver    : %s\n',solver)
+fprintf(' - Mu        : [');
+
+
+if strcat(bounds,'true')
+    boole_bounds = true;
+else
+    boole_bounds = false;
+end
+
+mu = 15;
+
+while true 
+
+mu = mu + 1;
+
+RES = {};
+
+done      = false;
+Degree    = 1;
+maxDegree = 20;
+
+N = ZS_SparseGrid.get_number_of_nodes(d,mu,growth);
+
+if N > 1100
+    break
+end
+
+while true
+
+    switch metaType % We explore all degrees up to maxDegree
+
+        case {'PCE','PCK'}
+
+            opts.Degree = Degree;
+            opts.Solver = solver;
+
+            temp = ZS_Bennchmark(All_Models.(model),metaType,All_Inputs.(model),family,mu,boole_bounds,opts);
+            temp = temp.Result;
+
+            if strcmp(solver,'OLS')
+                
+                % To avoid singular matrix
+                P     = nchoosek(d+Degree,Degree);
+                ratio = N/P;
+            
+                if ratio < 1.5 || Degree > maxDegree
+                    break
+                else
+                    Degree = Degree + 1;
+                    RES{end+1} = temp;
+                end
+        
+            else
+ 
+                if Degree >= maxDegree
+                    break
+                else
+                    Degree = Degree + 1;
+                    RES{end+1} = temp;
+                end
+            end
+
+        case 'Kriging'
+
+            opts.Trend  = solver;
+
+            temp = ZS_Bennchmark(All_Models.(model),metaType,All_Inputs.(model),family,mu,boole_bounds,opts);
+            temp = temp.Result;
+            RES  = temp;
+            break
+
+    end
+
+end
+
+fprintf(' %d ',mu);
+
+filename = ['fun_',model,'_',metaType,'_',family,'_',char(string(mu)),'_',bounds,'_',solver,'.mat'];
+ZS_save(filename,RES)
+end
+
+fprintf(']\n');
+
+end
+end
+
+
+
+
+
+%{
+index = [1 2 3 6 7 8 9];
+index = 1;
 
 model_names  = fieldnames(All_Models);
 model_names  = model_names(index);
-family_names = {'linspace','linspace','chebyshev_1','chebyshev_2','leja'};
-bounds       = {true,false,true,true,true};
-growth       = {@(k) 2.^k+1, @(k) 2.^k-1, @(k) 3.^(k), @(k) 2.^k+1, @(k) 2.*k+1};
+family_names = {'linspace','linspace','chebyshev_2','leja'};
+bounds       = {true,false,true,true};
+growth       = {@(k) 2.^k+1, @(k) 2.^k-1, @(k) 2.^k+1, @(k) 2.*k+1};
 
 %RES = repmat(struct('Model', '', 'Family', '', 'Level', []),N);
 count = 1;
-tic
 for i = 1:length(model_names) % Model iterator
 
     current_Model = model_names{i};
@@ -46,8 +188,6 @@ for i = 1:length(model_names) % Model iterator
         switch current_family
             case 'linspace'
                 mus = 0:5;
-            case 'chebyshev_1'
-                mus = 1:2;
             case 'chebyshev_2'
                 mus = 0:5;
             case 'leja'
@@ -83,10 +223,9 @@ for i = 1:length(model_names) % Model iterator
                 OPTS.Mapping.Type         = 'Rectangular';
                 OPTS.Mapping.CI           = alpha;
                 
-                OPTS.Surrogate.Type       = 'PCE';
                 OPTS.Surrogate.Model      = Model;
-                OPTS.Surrogate.Degree     = 1:20;
                 OPTS.Surrogate.Replicates = 1;
+                OPTS.Surrogate.Method     = 'OLS';
                 
                 this = ZS_createGrid(OPTS);
                 
@@ -95,14 +234,17 @@ for i = 1:length(model_names) % Model iterator
                 RES(count).Level  = current_mu;
                 RES(count).Bounds = current_bounds;
                 RES(count).Size   = this.Internal.Grid.Dimensions;
+
+                res = ZS_createAnalysis(this);
                 
                 try
-                    res = ZS_createAnalysis(this);
+                    
                     RES(count).Result = res;
                 catch me
                     RES(count).Result = me;
                 end
                 
+                %save("Results.mat","RES")
                 clear OPTS this res
                 count = count + 1;
         
@@ -115,17 +257,21 @@ for i = 1:length(model_names) % Model iterator
     fprintf('   Model : %s - Terminated\n',current_Model);
     
 end
-toc
 
 
-%%
-tot = 0;
+
+%% 
+clc
+clear all
+load("Results.mat")
+
 for i = 1:length(RES)
-    temp = RES(i).Result;
-    try
-        temp = [temp.T];
-    catch
-        temp = 0;
+    boole = isa(RES(i).Result,'ParallelException');
+    if boole
+        RES(i).Result = [];
     end
-    tot = tot + 1000*sum(temp);
+
 end
+
+save("Results_Post.mat","RES")
+%}

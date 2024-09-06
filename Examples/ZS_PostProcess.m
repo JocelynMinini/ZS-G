@@ -76,7 +76,7 @@ for i = 1:N
                         hold on
                     otherwise
                         warning("X_C0 error can be plotted only for d = 2 or d = 3.")
-                        close(f)
+                        %close(f)
                 end
 
                 legend(methods(:))

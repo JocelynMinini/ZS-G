@@ -63,7 +63,7 @@ methods
     d     = self.Dimensions(2);
     mu    = self.Level;
     pNorm = self.Basis.PNorm;
-    fun  = self.get_hyperbolic_truncation(pNorm);
+    fun   = self.get_hyperbolic_truncation(pNorm);
 
     self.Basis.MultiIndices = multiidx_gen(d,fun,mu,1);
     end
@@ -229,6 +229,56 @@ methods (Static)
     g = (1+mu)/d * nchoosek(d+mu,d-1);
     g = [g,d];
     end
+
+
+    function coefficient = get_number_of_nodes(d, mu, f)
+    %-------------------------------------------------------------------------------
+    % Name:           get_number_of_nodes
+    % Purpose:        This function will compute the number of
+    %                 nodes in a Smolyak grid (pNorm = 1)
+    % Last Update:    20.08.2024
+    %-------------------------------------------------------------------------------
+    coefficient = 0;
+    
+    % Calcul de G1 jusqu'à l'ordre mu
+    G1_coeffs = zeros(1, mu+1);
+    for n = 0:mu
+        fsub = f(n+1);  % Utilisation de la fonction anonyme f
+        G1_coeffs(n+1) = fsub;
+    end
+    
+    % Calcul de (1-x)^(d-1) jusqu'à l'ordre mu
+    binomial_coeffs = zeros(1, mu+1);
+    for k = 0:min(mu, d-1)
+        binomial_coeffs(k+1) = nchoosek(d-1, k) * (-1)^k;
+    end
+    
+    % Calcul de G1^d par convolution des coefficients
+    G1_power_d = G1_coeffs;
+    for i = 1:d-1
+        G1_power_d = conv(G1_power_d, G1_coeffs);
+        G1_power_d = G1_power_d(1:min(end, mu+1));  % Limite la longueur des coefficients
+    end
+    
+    % Convolution finale pour obtenir les coefficients de la série complète
+    final_coeffs = conv(G1_power_d, binomial_coeffs);
+    final_coeffs = final_coeffs(1:min(end, mu+1));  % Limite la longueur des coefficients
+    
+    % Extraction du coefficient d'intérêt
+    if length(final_coeffs) > mu
+        coefficient = final_coeffs(mu+1);
+    end
+    
+    return;
+    end
+
+
+
+
+
+
+
+
 
 end
 

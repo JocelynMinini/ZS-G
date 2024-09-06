@@ -112,6 +112,30 @@ methods(Static)
     end
 
 
+    function growth = get_growth(family)
+    %-------------------------------------------------------------------------------
+    % Name:           get_growth
+    % Purpose:        Return the growth function of family as an anonymous
+    %                 function
+    % Last Update:    21.08.2024
+    %-------------------------------------------------------------------------------
+    switch family
+        case 'linspace'
+            growth = @(k) 2.^k+1;
+        case 'linspace_noBounds'
+            growth = @(k) 2.^k-1;
+        case 'chebyshev_1'
+            growth = @(k) 3.^k;
+        case 'chebyshev_2'
+            growth = @(k) 2.^k+1;
+        case 'leja'
+            growth = @(k) 2.*k-1;
+        otherwise
+            error("Unknown collocation point family")
+    end
+    end
+
+
     function nestedFlag = check_nested(S)
     %-------------------------------------------------------------------------------
     % Name:           check_nested
@@ -285,8 +309,8 @@ methods(Static)
     [S,W,nestedFlag] = ZS_Points.postprocess(S,W,M);
     end
 
-
-    function [S,W,nestedFlag] = get_pts_leja(vec)
+    
+    function [S,W,nestedFlag] = get_pts_leja_old(vec)
     %-------------------------------------------------------------------------------
     % Name:           get_pts_leja
     % Purpose:        Create a set of symetric Leja nodes
@@ -302,6 +326,114 @@ methods(Static)
 
     [S,W,nestedFlag] = ZS_Points.postprocess(S,W,M);
     end
+    
+
+    function [S,W,nestedFlag] = get_pts_leja(vec)
+    %-------------------------------------------------------------------------------
+    % Name:           get_pts_leja
+    % Purpose:        Create a set of symetric Leja nodes
+    % Last Update:    15.06.2024
+    %-------------------------------------------------------------------------------
+    if ~all(mod(vec, 2))
+        error('Requested n points with leja must be odd.');
+    end
+
+    M = numel(vec);
+    S = cell(1,M);
+    W = S;
+    
+    zeta = ZS_Points.compute_symmetric_leja(max(vec));
+
+    for i = 1:M
+        S{i} = sort(zeta(1:vec(i)));
+        W{i} = zeros(1,vec(i)); % The weight are not calculated yet
+    end
+    
+    [S,W,nestedFlag] = ZS_Points.postprocess(S,W,M);
+    end
+
+
+    function [zeta, exitFlag] = compute_symmetric_leja(n, optimOpts)
+    %-------------------------------------------------------------------------------
+    % Name:           compute_symmetric_leja
+    % Purpose:        Compute the leja sequence upto n points with
+    %                 ParticleSwarm optimizer and reuse existing points if available
+    % Last Update:    15.06.2024
+    %-------------------------------------------------------------------------------
+    if ~mod(n, 2)
+        error('Requested n points with leja must be odd.');
+    end
+
+    path = fullfile(ZS_G_rootPath, 'core', 'ZS_Grid', 'leja.mat');
+    if exist(path, 'file')
+        load(path, 'Leja'); % Load existing data
+        if length(Leja.Zeta) >= n
+            zeta = Leja.Zeta(1:n);
+            exitFlag = Leja.ExitFlag(1:(n-1)/2);
+            return; % Early exit if we have enough points
+        else
+            zeta = Leja.Zeta; % Start with existing points
+            exitFlag = Leja.ExitFlag;
+        end
+    else
+        zeta = 0;
+        exitFlag = 1;
+    end
+
+    if ~exist("optimOpts","var")
+        opts.Display            = 'none';
+        opts.FunctionTolerance  = 10^-10;
+        opts.UseParallel        = true;
+        opts.SwarmSize          = 500;
+        opts.MaxStallIterations = 100;
+        opts.MaxIterations      = 500;
+        opts.HybridFcn          = 'fmincon';
+    else
+        opts = optimOpts;
+    end
+
+    fprintf('\n')
+    fprintf('### Starting Leja nodes computation ###')
+    fprintf('\n\n')
+
+    current_size = size(zeta,2);
+
+    % Continue loop from last calculated point
+    while true
+        fprintf(' - Nodes %d and %d : ',[current_size+1,current_size+2])
+        fprintf('...')
+        % Cost function
+        f = @(x) prod(abs(x - zeta));
+
+        % Minimize over [-1, 1]
+        [temp, fval, exitFlagTemp] = particleswarm(@(x) -f(x), 1, -1, 1, opts);
+
+        if exitFlagTemp ~= 1
+            opts.SwarmSize = 3*opts.SwarmSize;
+            opts.MaxIterations = 3*opts.MaxIterations;
+            [temp, fval, exitFlagTemp] = particleswarm(@(x) -f(x), 1, -1, 1, opts);
+        end
+
+        fprintf('\b\b\b')
+        fprintf('ParticleSwarm exitFlag = %d',exitFlagTemp)
+        fprintf('\n')
+
+        exitFlag = [exitFlag, exitFlagTemp];
+        zeta = [zeta, abs(temp), -abs(temp)]; % Append to the list symmetrically
+
+        current_size = size(zeta,2);
+
+        if current_size == n
+            break
+        end
+    end
+
+    Leja.Zeta = zeta;
+    Leja.ExitFlag = exitFlag;
+    save(path, "Leja"); % Save updated data
+    end
+
+
 
 
     function [S,W,nestedFlag] = get_pts_midpoints(vec)
