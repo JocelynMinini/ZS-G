@@ -12,12 +12,19 @@ function Y = ZS_fun_shortcolumn(X)
 %                The parameters b (width of the cross-section, in mm) and h (depth of the 
 %                cross-section, in mm) have nominal values b = 5 and h = 15.
 %-------------------------------------------------------------------------------------
-Y = X(:,1);
-M = X(:,2);
-P = X(:,3);
-
-b = 5;
-h = 15;
+n = size(X,1);
+d = size(X,2);
+if size(X,2) ~= 5
+    b = 8.668;
+    h = 25;
+    add = [b*ones(n,1),h*ones(n,1)];
+    X = [add,X];
+end
+b = X(:,1);
+h = X(:,2);
+Y = X(:,3);
+M = X(:,4);
+P = X(:,5);
 
 term1 = -4*M ./ (b.*(h.^2).*Y);
 term2 = -(P.^2) ./ ((b.^2).*(h.^2).*(Y.^2));

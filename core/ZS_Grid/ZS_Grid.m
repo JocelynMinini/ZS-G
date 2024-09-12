@@ -78,7 +78,7 @@ methods
     Input           = self.Internal.Validation.Mapping.opts.RandomVector;
     alpha           = self.Internal.Validation.Mapping.opts.CI;
     mapping         = self.Internal.Validation.Mapping.opts.Type;
-    [support,level] = self.get_credible_interval(Input,alpha);
+    [support,level,newInput] = self.get_credible_interval(Input,alpha);
 
     if strcmp(mapping,'Rectangular') || isnan(level)
         
@@ -109,12 +109,13 @@ methods
         error("Unknown mapping method.")
     end
 
-    self.Internal.Grid.Mapping.Type         = mapping;
-    self.Internal.Grid.Mapping.Support      = support;
-    self.Internal.Grid.Mapping.Level        = level;
-    self.Internal.Grid.Mapping.CI           = alpha;
-    self.Internal.Grid.Mapping.RandomVector = Input;
-    self.Grid                               = grid;
+    self.Internal.Grid.Mapping.Type           = mapping;
+    self.Internal.Grid.Mapping.Support        = support;
+    self.Internal.Grid.Mapping.Level          = level;
+    self.Internal.Grid.Mapping.CI             = alpha;
+    self.Internal.Grid.Mapping.RandomVector   = Input;
+    self.Internal.Grid.Mapping.U_RandomVector = newInput;
+    self.Grid                                 = grid;
     end
 
     function print_grid(self,contour_pdf)
@@ -133,15 +134,10 @@ methods
             level = 0;
         end
 
+        pdf = @(x) uq_evalPDF(x, Input);
         if self.Internal.Grid.Dimensions(2) == 2
 
-            n = 100;
-            x1 = linspace(support(1,1),support(1,2),n);
-            x2 = linspace(support(2,1),support(2,2),n);
-            [X1,X2] = meshgrid(x1,x2);
-            X = [X1(:),X2(:)];
-            Z = uq_evalPDF(X, Input);
-            Z = reshape(Z,[n n]);
+            [X1,X2,Z] = ZS_Grid2Plot(pdf,'matlab',support(1,:),support(2,:));
             figure
             v = linspace(level,max(Z,[],'all'),20);
             contour(X1,X2,Z,v)
@@ -153,14 +149,8 @@ methods
             mu = [Input.Marginals.Moments];
             mu = mu(1:2:end);
 
-            n = 100;
-            x1 = linspace(support(1,1),support(1,2),n);
-            x2 = linspace(support(2,1),support(2,2),n);
-            x3 = linspace(support(3,1),support(3,2),n);
-            [X1,X2,X3] = meshgrid(x1,x2,x3);
-            X = [X1(:),X2(:),X3(:)];
-            Z = uq_evalPDF(X, Input);
-            Z = reshape(Z,[n n n]);
+            [X1,X2,X3,Z] = ZS_Grid2Plot(pdf,'matlab',support(1,:),support(2,:),support(3,:));
+            figure
             lvls = linspace(level,max(Z,[],'all'),20);
             contourslice(X1,X2,X3,Z,mu(1),mu(2),mu(3),lvls)
             colorbar
@@ -233,7 +223,7 @@ end
 
 methods (Static)
 
-    function [support,level,solver_ouput] = get_credible_interval(uq_input,alpha)
+    function [support,level,new_uq_input,solver_ouput] = get_credible_interval(uq_input,alpha)
     %-------------------------------------------------------------------------------
     % Name:           get_credible_interval
     % Purpose:        Stretch the unit_grid over the intervals given by
@@ -262,6 +252,8 @@ methods (Static)
         n = round(n_req);
     end
 
+    d = size(uq_input.Marginals,2);
+
     % The solver does not work if all distributions are uniform, skip in
     % this case
     index = ZS_Grid.get_all_uniform(uq_input);
@@ -280,10 +272,10 @@ methods (Static)
         % Then evaluate the PDF
         f = uq_evalPDF(X, uq_input);
         % Numercial integration over Sl is driven the Monte-Carlo method
-        fun = @(x) MCS(x,alpha,f);
+        fun = @(x) fun_indicator(x,alpha,f);
         % Now find the correpoding level by solving 
         %opts = optimset('Display','iter'); % show iterations
-        [level,~,~,solver_ouput] = fzero(fun,[0+eps max(f,[],'all')]);
+        [level,~,~,solver_ouput] = fzero(fun,[0 max(f,[],'all')]);
         % sanity check in 2d : l = alpha/(2*pi*sig1*sig2);
         % Select the points inside of the region
         index_level = f>level;
@@ -295,9 +287,14 @@ methods (Static)
         support(index,:) = param(index,:);
     end
 
-    
+    for i = 1:d
+        OPTS.Marginals(i).Type = 'Uniform';
+        OPTS.Marginals(i).Parameters = support(i,:);
+    end
+    new_uq_input = uq_createInput(OPTS,'-private');
 
-    function out = MCS(level,ci,f)
+
+    function out = fun_indicator(level,ci,f)
         N = size(f,1);
         % Numercial integration over Sl is driven the Monte-Carlo method
         Sl_bar = f < level;

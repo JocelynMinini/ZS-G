@@ -1,16 +1,26 @@
-function [L,L_norm] = ZS_get_L_norm(trueModel,surrogateModel,opts,type)
+function [L,L_norm] = ZS_get_L_norm(trueModel,surrogateModel,opts)
 %-------------------------------------------------------------------------------
 % Name:           ZS_get_L_norm
 % Purpose:        This function computes the L-norm using MC simulation
-%                 according to 'type'
-% Last Update:    17.07.2024
+% Last Update:    12.09.2024
 %-------------------------------------------------------------------------------
 Input = opts.Input;
 N     = opts.NSamples;
+type  = opts.Type;
 
-X       = uq_getSample(Input,1);
-pdf_val = uq_evalPDF(X,Input);
-X       = uq_getSample(Input,N,'lhs');
+distType = {Input.Marginals.Type};
+if isequal(distType{:},'Uniform')
+    X       = uq_getSample(Input,1);
+    pdf_val = uq_evalPDF(X,Input);
+    X       = uq_getSample(Input,N,'lhs');
+    idx     = ones(N,1);
+else
+    X       = uq_getSample(Input,N,'lhs');
+    pdf_val = uq_evalPDF(X,Input);
+    level   = opts.Level;
+    idx     = pdf_val >= level;
+end
+
 
 switch type
     case 'L1'
@@ -22,7 +32,7 @@ switch type
         error("Type must be 'L1' or 'L2'")
 end
     
-int     = mean(fun(X))/pdf_val;
+int     = mean(idx.*(fun(X)./pdf_val));
 ybar    = mean(uq_evalModel(trueModel,X));
 
 switch type

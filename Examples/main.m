@@ -5,7 +5,7 @@ ZS_G
 addpath(genpath('C:\Users\jocelyn.minini\switchdrive\MetaG\4_MATLAB\ZS+G\Examples'))
 
 try
-    p = parpool;
+    p = parpool(32);
 end
 
 
@@ -20,7 +20,7 @@ All_Models = ZS_createModel_fun;
 % model iterations
 model_names = fieldnames(All_Models);
 model_index = [3 5 6 9 4];
-model_index = [9 4];
+%model_index = [ 4];
 
 % solver iteration
 metaType = 'PCE';
@@ -38,7 +38,7 @@ for j = 1:length(solver_names)
 
 
 model    = model_names{k};
-family   = 'leja';
+family   = 'chebyshev_1';
 bounds   = 'true';
 solver   = solver_names{j};
 d        = length(All_Inputs.(model).Marginals);
@@ -50,6 +50,8 @@ switch family
         else
             growth = @(k) 2.^k-1;
         end
+    case 'chebyshev_1'
+        growth = @(k) 3.^k;
     case 'chebyshev_2'
         growth = @(k) 2.^k+1;
     case 'leja'
@@ -73,7 +75,7 @@ else
     boole_bounds = false;
 end
 
-mu = 15;
+mu = 0;
 
 while true 
 

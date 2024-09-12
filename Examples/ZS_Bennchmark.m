@@ -5,18 +5,7 @@ if nargin < 8
     replicates = 50;
 end
 
-switch family
-    case 'linspace'
-        if bounds
-            growth = @(k) 2.^k+1;
-        else
-            growth = @(k) 2.^k-1;
-        end
-    case 'chebyshev_2'
-        growth = @(k) 2.^k+1;
-    case 'leja'
-        growth = @(k) 2.*k+1;
-end
+growth = ZS_Points.get_growth(family);
 
 d = length(input.Marginals);
 

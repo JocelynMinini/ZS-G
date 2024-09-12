@@ -324,6 +324,7 @@ methods
     end
 
     % for an isoprobabilistic mapping, all basis vectors must be 'linspace'
+    %{
     test_1 = all(cellfun(@(x) strcmp(x,'linspace'),self.Basis.opts.Family));
 
     if strcmp(opts.Mapping.Type,'Isoprobabilistic')
@@ -334,6 +335,7 @@ methods
             return
         end
     end
+    %}
 
 
 

@@ -1,28 +1,38 @@
 function [xstar,ystar] = ZS_get_C0(trueModel,surrogateModel,opts)
 %-------------------------------------------------------------------------------
 % Name:           ZS_get_C0
-% Purpose:        This function computes the C0-norm using minimazation
-%                 solver
-% Last Update:    17.07.2024
+% Purpose:        This function computes the C0-norm using particle swarm
+%                 optimization solver
+% Last Update:    12.09.2024
 %-------------------------------------------------------------------------------
 d          = opts.d;
 support    = opts.support;
 optim_opts = opts.optimOpts;
 
-fun   = @(x) -abs(uq_evalModel(trueModel,x) - uq_evalModel(surrogateModel,x));
-%[xstar,ystar] = uq_gso(fun, [], d , support(:,1)' , support(:,2)' , optim_opts);
+% For a levelset optimization
+if isfield(opts,"Input") && isfield(opts,"Level")
+    levelOptim = true;  
+else
+    levelOptim = false;
+end
+
+if levelOptim
+    level = opts.Level;
+    Input = opts.Input;
+    fun = @(x) modelPenalty(x,trueModel,surrogateModel,Input,level);
+else
+    fun = @(x) -abs(uq_evalModel(trueModel,x) - uq_evalModel(surrogateModel,x));
+end
+
 [xstar,ystar] = particleswarm(fun,d,support(:,1)' , support(:,2)', optim_opts);
 
-%{
-Just for graphical check
-x1 = linspace(support(1,1),support(1,2));
-x2 = linspace(support(2,1),support(2,2));
-[X,Y] = meshgrid(x1,x2);
-Z = fun([X(:),Y(:)]);
-Z = reshape(Z,size(X));
-surf(X,Y,Z)
-hold on
-scatter3(xstar(1),xstar(2),ystar,'red','filled')
-%}
+% This is the transformed model with penalty term = inf
+function Y = modelPenalty(X,trueModel,surrogateModel,uq_input,level)
+    pdf = uq_evalPDF(X,uq_input);
+    idx = pdf >= level;
+    Y   = -abs(uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X));
+    Y(~idx,:) = inf;
+end
+
 end
 

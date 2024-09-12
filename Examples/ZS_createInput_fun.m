@@ -20,7 +20,6 @@ Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
 
-
 % Detpep10exp function
 d = 3;
 OPTS.Marginals = uq_Marginals(d, 'Uniform', [0,1]);
@@ -78,14 +77,35 @@ clear OPTS
 count = count + 1;
 
 % shortcolumn
-OPTS.Marginals(1).Type    = 'Lognormal';
-OPTS.Marginals(1).Moments = [5 0.5];
+OPTS.Marginals(1).Type       = 'Lognormal';
+OPTS.Marginals(1).Moments    = [5 0.5];
 
-OPTS.Marginals(2).Type    = 'Gaussian';
-OPTS.Marginals(2).Moments = [2000 400];
+OPTS.Marginals(2).Type       = 'Gaussian';
+OPTS.Marginals(2).Moments    = [2000 400];
 
-OPTS.Marginals(3).Type    = 'Gumbel';
-OPTS.Marginals(3).Moments = [500 100];
+OPTS.Marginals(3).Type       = 'Gaussian';
+OPTS.Marginals(3).Moments    = [500 100];
+
+OPTS.Copula.Type = 'Gaussian';
+OPTS.Copula.Parameters = [1 0 0 ; 0 1 0.5 ; 0 0.5 1];
+
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+
+count = count + 1;
+
+% stability column
+OPTS.Marginals(1).Name = 'k';
+OPTS.Marginals(1).Type = 'Lognormal';
+OPTS.Marginals(1).Moments = [0.6 0.1*0.6];
+
+OPTS.Marginals(2).Name = 'E';
+OPTS.Marginals(2).Type = 'Lognormal';
+OPTS.Marginals(2).Moments = [1e4 0.05*1e4];
+
+OPTS.Marginals(3).Name = 'L';
+OPTS.Marginals(3).Type = 'Lognormal';
+OPTS.Marginals(3).Moments = [3e3 0.01*3e3];
 
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS

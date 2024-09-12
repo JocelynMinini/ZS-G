@@ -10,7 +10,7 @@ Model         = All_Models.(current_Model);
 d             = length(Input.Marginals);
 
 if d > 3
-    error('This function works only for d = 2')
+    error('This function works only for d =< 3')
 end
 
 if isequal(family,'linspace') & ~bounds

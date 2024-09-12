@@ -32,10 +32,11 @@ for i = 1:d
     IOpts.Marginals(i).Type       = 'Uniform';
     IOpts.Marginals(i).Parameters = support(i,:);
 end
-L2_Input = uq_createInput(IOpts,'-private');
+L_Input = uq_createInput(IOpts,'-private');
 
-L2_opts.Input    = L2_Input;
-L2_opts.NSamples = 5*10^4;
+L_opts.Input    = L_Input;
+L_opts.NSamples = 5*10^4;
+L_opts.Type     = 'L1';
 
 
 
@@ -90,7 +91,7 @@ parfor i = 1:n
     C0(i,:)                 = abs(temp_ystar);
    
     % L1 error using MCS
-    [L1(i,:),L1_norm(i,:)] = ZS_get_L_norm(trueModel,surrogateModel,L2_opts,'L1');
+    [L1(i,:),L1_norm(i,:)] = ZS_get_L_norm(trueModel,surrogateModel,L_opts);
     
     % L2 error using MCS - no more used
     %[L2(i,:),L2_norm(i,:)] = ZS_get_L_norm(trueModel,surrogateModel,L2_opts,'L2');
