@@ -48,17 +48,17 @@ end
 
 
 % Now create the common PCE options
-for i = 1:length(PCOpts)
-    OPTS.Type               = 'Metamodel';
-    OPTS.Display            = 'quiet';
-    OPTS.MetaType           = 'PCE';
-    OPTS.TruncOptions.qNorm = 1;
-    OPTS.Degree             = 1:MaxDegree;
-    OPTS.DegreeEarlyStop    = false;
-    OPTS.qNormEarlyStop     = false;
-    OPTS.Method             = 'OLS';
-    PCOpts{i} = OPTS;
-end
+OPTS.Type               = 'Metamodel';
+OPTS.Display            = 'quiet';
+OPTS.MetaType           = 'PCE';
+OPTS.TruncOptions.qNorm = 1;
+OPTS.Degree             = 1:MaxDegree;
+OPTS.DegreeEarlyStop    = false;
+OPTS.qNormEarlyStop     = false;
+OPTS.Method             = 'OLS';
+
+PCOpts(:)               = {OPTS};
+
 
 % LHS design according to random vector
 i = 1;

@@ -21,6 +21,8 @@ Model   = Models.(modelName);
 
 clear OPTS Models Inputs
 
+
+% C0 optimization
 optimOpts.SwarmSize     = 300;
 
 fun = @(x) Model_Penalty(x,Model,Input,level);
@@ -34,6 +36,18 @@ pdf = @(x) uq_evalPDF(x,Input);
 contour(X,Y,Z,[level level],'black')
 plot(xstar(1), xstar(2), '+', 'LineWidth', 2, 'MarkerSize', 10)
 
+% L1 integration
+OPTS.mString = 'sin( X(:,1) + (X(:,2)).^2 )';
+OPTS.isVectorized = true;
+meta = uq_createModel(OPTS,'-private');
+
+% Options for L1 norm
+L1_Opts.Input    = Input;
+L1_Opts.NSamples = 10^6;
+L1_Opts.Type     = 'L1';
+L1_Opts.Level    = level;
+
+L1 = ZS_get_L_norm(Model,meta,L1_Opts);
 
 function Y = Model_Penalty(X,uq_model,uq_input,level)
     

@@ -51,12 +51,28 @@ C0_Opts.Level                 = level;
 
 L1    = zeros(n,1);
 C0    = L1;
-xstar = zeros(n,d);
+LOO   = L1;
+XC0   = zeros(n,d);
 
 for i = 1:length(PCOpts)
     PCE                = uq_createModel(PCOpts{i},'-private');
+    LOO(i)             = PCE.Error.ModifiedLOO;
     L1(i)              = ZS_get_L_norm(trueModel,PCE,L1_Opts);
-    [xstar(i,:),C0(i)] = ZS_get_C0(trueModel,PCE,C0_Opts);
+    [XC0(i,:),C0(i)]   = ZS_get_C0(trueModel,PCE,C0_Opts);
 end
 
-RES.Random
+
+%%
+errors = {'LOO','L1','C0','XC0'};
+for i = 1:length(errors)
+        C = cell(1,10);
+        C(:) = {errors{i}};
+        toEval = ['RES.%s.Random  = %s(1:Replicates,:);\n'...
+                  'RES.%s.Uniform = %s(Replicates+1:2*Replicates,:);\n'...
+                  'RES.%s.Smolyak = %s(end-1,:);\n'...
+                  'RES.%s.Isoprob = %s(end,:);\n'...
+                  'RES.%s.Isoprob = %s(end,:);\n'...
+                  ];
+        toEval = sprintf(toEval,C{:});
+        eval(toEval)
+end
