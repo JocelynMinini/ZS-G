@@ -1,5 +1,10 @@
-function PCOpts = ZS_createPCOpts(trueModel,input,mu,replicates)
-PCOpts = cell(1,2*replicates+2);
+function PCOpts = ZS_createPCOpts(opts,replicates)
+
+metaType  = opts.MetaType;
+trueModel = opts.Model;
+input     = opts.Input;
+alpha     = opts.alpha;
+mu        = opts.mu;
 
 % Set the sparse grid
 family = 'leja';
@@ -8,7 +13,7 @@ f  = ZS_Points.get_growth(family);
 
 OPTS.Mapping.RandomVector = input;
 OPTS.Mapping.Type         = 'Rectangular';
-OPTS.Mapping.CI           = 0.05;
+OPTS.Mapping.CI           = alpha;
 
 OPTS.Grid.Class   = 'Sparse';
 OPTS.Grid.D       = d;
@@ -47,49 +52,95 @@ end
 
 
 
-% Now create the common PCE options
+
+scenarios = {'Natural','Uniform','Smolyak','Isoprobabilistic'};
+
+PCOpts    = cell(1,(length(scenarios)-2)*replicates+2);
+
+
+% Now create the common surrogate options
 OPTS.Type               = 'Metamodel';
 OPTS.Display            = 'quiet';
-OPTS.MetaType           = 'PCE';
-OPTS.TruncOptions.qNorm = 1;
-OPTS.Degree             = 1:MaxDegree;
-OPTS.DegreeEarlyStop    = false;
-OPTS.qNormEarlyStop     = false;
-OPTS.Method             = 'OLS';
+OPTS.MetaType           = metaType;
 
-PCOpts(:)               = {OPTS};
-
-
-% LHS design according to random vector
-i = 1;
-for k = 1:replicates
-    PCOpts{i}.Input       = input;
-    X_ED                  = uq_getSample(input,N,'lhs','LHSiterations',20);
-    PCOpts{i}.ExpDesign.X = X_ED;
-    PCOpts{i}.ExpDesign.Y = evalModel(trueModel,X_ED);
-    i = i + 1;
+switch metaType
+    case 'PCE'
+        OPTS.TruncOptions.qNorm = 1;
+        OPTS.Degree             = 1:MaxDegree;
+        OPTS.DegreeEarlyStop    = false;
+        OPTS.qNormEarlyStop     = false;
+        OPTS.Method             = 'OLS';
+    otherwise
+        error('This surrogate model is not supported yet.')
 end
 
-% LHS design according to uniformly distributed points on R
-for k = 1:replicates
-    PCOpts{i}.Input       = input;
-    X_ED                  = uq_getSample(U_input,N,'lhs','LHSiterations',20);
-    PCOpts{i}.ExpDesign.X = X_ED;
-    PCOpts{i}.ExpDesign.Y = evalModel(trueModel,X_ED);
-    i = i + 1;
+PCOpts(:) = {OPTS};
+
+
+count = 1;
+for k = 1:length(scenarios)
+
+    switch scenarios{k}
+
+        case 'Natural' % LHS design according to the natural random vector
+            
+            for j = 1:replicates
+                PCOpts{count}.Input       = input;
+                X_ED                      = uq_getSample(input,N,'lhs','LHSiterations',20);
+                PCOpts{count}.ExpDesign.X = X_ED;
+                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                count = count + 1;
+            end
+
+        case 'Uniform' % LHS design according to uniformly distributed points on HDR alpha
+
+            for j = 1:replicates
+                PCOpts{count}.Input       = input;
+                X_ED                      = uq_getSample(U_input,N,'lhs','LHSiterations',20);
+                PCOpts{count}.ExpDesign.X = X_ED;
+                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                count = count + 1;
+            end
+
+        case 'Beta' % LHS design according to beta distributed points on HDR alpha
+            
+            beta = opts.beta;
+            for j = 1:d
+                InputOPTS.Marginals(j).Type       = 'Beta';
+                InputOPTS.Marginals(j).Parameters = [beta,beta,support(j,1),support(j,2)]; 
+            end
+
+            betaInput = uq_createInput(InputOPTS,'-private');
+
+            for j = 1:replicates
+                PCOpts{count}.Input       = input;
+                X_ED                      = uq_getSample(betaInput,N,'lhs','LHSiterations',20);
+                PCOpts{count}.ExpDesign.X = X_ED;
+                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                count = count + 1;
+            end
+
+        case 'Smolyak'
+
+            PCOpts{count}.Input       = input;
+            X_ED                      = recGrid;
+            PCOpts{count}.ExpDesign.X = X_ED;
+            PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+            count = count + 1;
+
+        case 'Isoprobabilistic'
+
+            PCOpts{count}.Input       = input;
+            X_ED                      = isoGrid;
+            PCOpts{count}.ExpDesign.X = X_ED;
+            PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+
+    end
+
 end
 
 
-PCOpts{i}.Input       = input;
-X_ED                  = recGrid;
-PCOpts{i}.ExpDesign.X = X_ED;
-PCOpts{i}.ExpDesign.Y = evalModel(trueModel,X_ED);
-i = i + 1;
 
-PCOpts{i}.Input       = input;
-X_ED                  = isoGrid;
-PCOpts{i}.ExpDesign.X = X_ED;
-PCOpts{i}.ExpDesign.Y = evalModel(trueModel,X_ED);
 
 
 function Y = evalModel(trueModel,X)
