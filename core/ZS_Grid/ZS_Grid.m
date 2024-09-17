@@ -102,7 +102,7 @@ methods
         grid = self.map_stretch(grid,U_support);
         grid = self.map_translate(grid,U_support);
         self.Internal.Grid.Mapping.Circular.Alpha = grid; % Map the grid according to some confidence interval
-
+        
         grid = uq_GeneralIsopTransform(grid,U_Input.Marginals,U_Input.Copula,Input.Marginals,Input.Copula); % Map the grid with the Nataf transform
 
     else

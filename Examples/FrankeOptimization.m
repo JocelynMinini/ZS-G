@@ -40,7 +40,7 @@ fun = @(x) Model_Penalty(x,Model,Input,level);
 [xstar,ystar,exitFlag,output,points] = particleswarm(fun,2,[0 0],[1 1],optimOpts);
 
 
-%{
+
 [X,Y,Z] = ZS_Grid2Plot(Model,'matlab',[0 1],[0 1]);
 contour(X,Y,Z,20)
 hold on
@@ -61,7 +61,7 @@ L1_Opts.Type     = 'L1';
 L1_Opts.Level    = level;
 
 L1 = ZS_get_L_norm(Model,meta,L1_Opts);
-%}
+
 
 function Y = Model_Penalty(X,uq_model,uq_input,level)
     

@@ -1,6 +1,7 @@
 clc
 clear 
 ZS_G
+uqlab
 
 % Load all models and inputs
 All_Inputs = ZS_createInput_fun;
@@ -49,13 +50,13 @@ L1_Opts.Type     = 'L1';
 L1_Opts.Level    = level;
 
 % Options for C0 solver
-C0_Opts.optimOpts.Display     = 'off';
-C0_Opts.optimOpts.SwarmSize   = 300;
-optim_opts.UseVectorized      = true;
-C0_Opts.support               = R_01;
-C0_Opts.d                     = size(Input.Marginals,2);
-C0_Opts.Input                 = Input;
-C0_Opts.Level                 = level;
+C0_Opts.optimOpts.Display        = 'off';
+C0_Opts.optimOpts.SwarmSize      = 300;
+C0_Opts.optim_opts.UseVectorized = true;
+C0_Opts.support                  = R_01;
+C0_Opts.d                        = size(Input.Marginals,2);
+C0_Opts.Input                    = Input;
+C0_Opts.Level                    = level;
 
 L1    = zeros(n,1);
 C0    = L1;
@@ -86,3 +87,12 @@ end
 
 filename = ['model_',model,'_',opts.MetaType,'_',char(string(opts.mu))];
 ZS_save(filename,RES)
+
+
+%%
+test = [];
+for i = 1:length(XC0)
+test(end+1,:) = R_01(1,2) >= XC0(i,1) & XC0(i,1) >= R_01(1,1) & ...
+R_01(2,2) >= XC0(i,2) & XC0(i,2) >= R_01(2,1) & ...
+R_01(3,2) >= XC0(i,3) & XC0(i,3) >= R_01(3,1);
+end
