@@ -77,14 +77,14 @@ clear OPTS
 count = count + 1;
 
 % shortcolumn
-OPTS.Marginals(1).Type       = 'Lognormal';
-OPTS.Marginals(1).Moments    = [5 0.5];
+OPTS.Marginals(1).Type    = 'Lognormal';
+OPTS.Marginals(1).Moments = [5 0.5];
 
-OPTS.Marginals(2).Type       = 'Gaussian';
-OPTS.Marginals(2).Moments    = [2000 400];
+OPTS.Marginals(2).Type    = 'Gaussian';
+OPTS.Marginals(2).Moments = [2000 400];
 
-OPTS.Marginals(3).Type       = 'Gaussian';
-OPTS.Marginals(3).Moments    = [500 100];
+OPTS.Marginals(3).Type    = 'Gaussian';
+OPTS.Marginals(3).Moments = [500 100];
 
 OPTS.Copula.Type = 'Gaussian';
 OPTS.Copula.Parameters = [1 0 0 ; 0 1 0.5 ; 0 0.5 1];
@@ -94,6 +94,7 @@ clear OPTS
 
 count = count + 1;
 
+%{
 % stability column
 OPTS.Marginals(1).Name = 'k';
 OPTS.Marginals(1).Type = 'Lognormal';
@@ -110,6 +111,7 @@ OPTS.Marginals(3).Moments = [3e3 0.01*3e3];
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
+%}
 
 % steelcolumn
 b = 300;
@@ -141,6 +143,41 @@ OPTS.Marginals(8).Moments = [30 10];
 
 OPTS.Marginals(9).Type    = 'Weibull';
 OPTS.Marginals(9).Moments = [210 4.2]*1000;
+
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+count = count + 1;
+
+% trussStructure
+OPTS.Marginals(1).Type    = 'Lognormal';
+OPTS.Marginals(1).Moments = [210 0.1*210]*1000000;
+
+OPTS.Marginals(2).Type    = 'Lognormal';
+OPTS.Marginals(2).Moments = [210 0.1*210]*1000000;
+
+OPTS.Marginals(3).Type    = 'Lognormal';
+OPTS.Marginals(3).Moments = [2 0.1*1]*0.001;
+
+OPTS.Marginals(4).Type    = 'Lognormal';
+OPTS.Marginals(4).Moments = [1 0.1*1]*0.001;
+
+OPTS.Marginals(5).Type    = 'Gumbel';
+OPTS.Marginals(5).Moments = [50 0.15*50];
+
+OPTS.Marginals(6).Type    = 'Gumbel';
+OPTS.Marginals(6).Moments = [50 0.15*50];
+
+OPTS.Marginals(7).Type    = 'Gumbel';
+OPTS.Marginals(7).Moments = [50 0.15*50];
+
+OPTS.Marginals(8).Type    = 'Gumbel';
+OPTS.Marginals(8).Moments = [50 0.15*50];
+
+OPTS.Marginals(9).Type    = 'Gumbel';
+OPTS.Marginals(9).Moments = [50 0.15*50];
+
+OPTS.Marginals(10).Type    = 'Gumbel';
+OPTS.Marginals(10).Moments = [50 0.15*50];
 
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS

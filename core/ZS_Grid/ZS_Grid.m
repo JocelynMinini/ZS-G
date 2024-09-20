@@ -365,7 +365,7 @@ methods (Static)
     %                 on the hypersphere.
     % Last Update:    01.05.2024
     %-------------------------------------------------------------------------------
-    mapped_grid = tan(pi/4*grid);
+    mapped_grid = tan(pi/4*(2*acos(-grid)/pi-1));
     end
 
     function mapped_grid = map_circular(grid)

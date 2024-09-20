@@ -10,7 +10,7 @@ properties
     Sj          (1,:) cell                        % Set in a dimension j
     nestedFlag  logical                           % Logical value if the subsets of Sj are nested
     Family      (1,:) char {mustBeText(Family)}   % Family name of the basis 1d-vectors, must be text
-    M           double                            % Number of subsets of Sj (capital mu)
+    M           double                            % Number of Sj (capital mu)
     N           double                            % Total number of element in Sj
     Vec         (1,:) double {mustBeNumeric(Vec)} % Vector of requested number of points, must be numeric
 end

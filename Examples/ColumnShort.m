@@ -9,12 +9,23 @@ All_Models = ZS_createModel_fun;
 
 model = 'shortcolumn';
 
-Input     = All_Inputs.(model);
-trueModel = All_Models.(model);
+Input       = All_Inputs.(model);
+trueModel   = All_Models.(model);
+trueModelFE = All_Models.shortcolumnFE;
+
 
 d = size(Input.Marginals,2);
 
 clear All_Models All_Inputs
+
+nd = linspace(0,500,10);
+md = linspace(0,2000,10);
+[MD,ND] = meshgrid(md,nd);
+X = [5*ones(100,1),MD(:),ND(:)];
+clear MD ND nd md
+
+Y = ZS_parallel_evalModel(trueModelFE,X);
+
 
 %% Sensitivity analysis
 OPTS.Type                  = 'Sensitivity';
@@ -28,6 +39,11 @@ clear OPTS
 
 RES.Kucherenko.Total = Kucherenko.Results.Total;
 RES.Kucherenko.First = Kucherenko.Results.FirstOrder;
+
+
+
+
+
 
 %% Error analysis
 % Options for surrogate model

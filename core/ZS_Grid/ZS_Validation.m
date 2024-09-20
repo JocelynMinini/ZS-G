@@ -324,18 +324,17 @@ methods
     end
 
     % for an isoprobabilistic mapping, all basis vectors must be 'linspace'
-    %{
-    test_1 = all(cellfun(@(x) strcmp(x,'linspace'),self.Basis.opts.Family));
+
+    test_1 = all(cellfun(@(x) strcmp(x,'leja'),self.Basis.opts.Family));
 
     if strcmp(opts.Mapping.Type,'Isoprobabilistic')
         if ~test_1
             self.Mapping.check  = false;
-            self.Mapping.error  = "When using isoprobabilistic mapping, all basis vectors must be 'linspace'.";
+            self.Mapping.error  = "When using isoprobabilistic mapping, all basis vectors must be 'leja'.";
             self.Summary(end+1) = 0;
             return
         end
     end
-    %}
 
 
 
