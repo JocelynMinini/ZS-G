@@ -6,6 +6,13 @@ input     = opts.Input;
 alpha     = opts.alpha;
 mu        = opts.mu;
 
+isFE = isequal(trueModel.Type,'uq_uqlink');
+if isFE
+    toEval = 'ZS_parallel_evalModel(trueModel,X_ED)';
+else
+    toEval = 'uq_evalModel(trueModel,X_ED)';
+end
+
 % Set the sparse grid
 family = 'leja';
 d  = size(input.Marginals,2);
@@ -88,7 +95,7 @@ for k = 1:length(scenarios)
                 PCOpts{count}.Input       = input;
                 X_ED                      = uq_getSample(input,N,'lhs','LHSiterations',20);
                 PCOpts{count}.ExpDesign.X = X_ED;
-                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                PCOpts{count}.ExpDesign.Y = eval(toEval);
                 count = count + 1;
             end
 
@@ -98,7 +105,7 @@ for k = 1:length(scenarios)
                 PCOpts{count}.Input       = input;
                 X_ED                      = uq_getSample(U_input,N,'lhs','LHSiterations',20);
                 PCOpts{count}.ExpDesign.X = X_ED;
-                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                PCOpts{count}.ExpDesign.Y = eval(toEval);
                 count = count + 1;
             end
 
@@ -116,7 +123,7 @@ for k = 1:length(scenarios)
                 PCOpts{count}.Input       = input;
                 X_ED                      = uq_getSample(betaInput,N,'lhs','LHSiterations',20);
                 PCOpts{count}.ExpDesign.X = X_ED;
-                PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+                PCOpts{count}.ExpDesign.Y = eval(toEval);
                 count = count + 1;
             end
 
@@ -125,7 +132,7 @@ for k = 1:length(scenarios)
             PCOpts{count}.Input       = input;
             X_ED                      = recGrid;
             PCOpts{count}.ExpDesign.X = X_ED;
-            PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+            PCOpts{count}.ExpDesign.Y = eval(toEval);
             count = count + 1;
 
         case 'Isoprobabilistic'
@@ -133,7 +140,7 @@ for k = 1:length(scenarios)
             PCOpts{count}.Input       = input;
             X_ED                      = isoGrid;
             PCOpts{count}.ExpDesign.X = X_ED;
-            PCOpts{count}.ExpDesign.Y = evalModel(trueModel,X_ED);
+            PCOpts{count}.ExpDesign.Y = eval(toEval);
 
     end
 

@@ -156,7 +156,7 @@ OPTS.Marginals(2).Type    = 'Lognormal';
 OPTS.Marginals(2).Moments = [210 0.1*210]*1000000;
 
 OPTS.Marginals(3).Type    = 'Lognormal';
-OPTS.Marginals(3).Moments = [2 0.1*1]*0.001;
+OPTS.Marginals(3).Moments = [2 0.1*2]*0.001;
 
 OPTS.Marginals(4).Type    = 'Lognormal';
 OPTS.Marginals(4).Moments = [1 0.1*1]*0.001;

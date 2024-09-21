@@ -147,8 +147,8 @@ function out = createBeam(idx,e,a,type)
     % Type
     out.Ele    = type;
     % Geometry
-    out.NodeID = cell2mat({Nodes(idx).ID}');
-    out.XY     = cell2mat({Nodes(idx).XY}');
+    out.NodeID = [Nodes(idx).ID]';
+    out.XY     = reshape([Nodes(idx).XY],2,2)';
     out.A      = a;
     v          = out.XY(2,:)-out.XY(1,:);
     out.L      = norm(v);

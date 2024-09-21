@@ -13,19 +13,8 @@ Input       = All_Inputs.(model);
 trueModel   = All_Models.(model);
 trueModelFE = All_Models.shortcolumnFE;
 
-
 d = size(Input.Marginals,2);
-
 clear All_Models All_Inputs
-
-nd = linspace(0,500,10);
-md = linspace(0,2000,10);
-[MD,ND] = meshgrid(md,nd);
-X = [5*ones(100,1),MD(:),ND(:)];
-clear MD ND nd md
-
-Y = ZS_parallel_evalModel(trueModelFE,X);
-
 
 %% Sensitivity analysis
 OPTS.Type                  = 'Sensitivity';
@@ -41,23 +30,22 @@ RES.Kucherenko.Total = Kucherenko.Results.Total;
 RES.Kucherenko.First = Kucherenko.Results.FirstOrder;
 
 
+%% Common options both analytical and FE
+metaType = 'PCE';
+mu       = 6;
+alpha    = 0.05;
+[R_01,level,errorInput] = ZS_Grid.get_credible_interval(Input,0.01);
 
-
-
-
-%% Error analysis
+%% Error analysis - Analytical model
 % Options for surrogate model
-opts.MetaType = 'PCE';
+opts.MetaType = metaType;
+opts.alpha    = alpha;
+opts.mu       = mu;
 opts.Model    = trueModel;
 opts.Input    = Input;
-opts.alpha    = 0.05;
-opts.mu       = 6;
 Replicates    = 1;
 PCOpts        = ZS_createPCOpts(opts,Replicates);
-
-n = length(PCOpts);
-
-[R_01,level,errorInput] = ZS_Grid.get_credible_interval(Input,0.01);
+n             = length(PCOpts);
 
 % Options for L1 norm
 L1_Opts.Input    = Input;
@@ -87,6 +75,32 @@ for i = 1:n
 end
 
 
+%% Error analysis - FE model
+opts.Model    = trueModelFE;
+Replicates    = 1;
+PCOpts        = ZS_createPCOpts(opts,Replicates);
+n             = length(PCOpts);
+X_Validation  = ZS_getSubsample(Input,level,100);
+Y_FE          = ZS_parallel_evalModel(trueModelFE,X);
+
+for i = n+1:n+length(PCOpts)
+    PCE          = uq_createModel(PCOpts{i},'-private');
+    Y_Meta       = uq_evalModel(PCE,X_Validation);
+    
+    % LOO error
+    LOO(i)       = PCE.Error.ModifiedLOO;
+
+    % C0 error
+    [tempC0,idx] = max(abs(Y_FE-Y_Meta)); 
+    XC0(i,:)     = X_Validation(idx,:);
+    C0(i)        = tempC0; 
+    
+    % L1 error
+    L1(i)        = mean(abs(Y_FE-Y_Meta));
+end
+
+
+
 %% Save results
 errors = {'LOO','L1','C0','XC0'};
 for i = 1:length(errors)
@@ -103,12 +117,3 @@ end
 
 filename = ['model_',model,'_',opts.MetaType,'_',char(string(opts.mu))];
 ZS_save(filename,RES)
-
-
-%%
-test = [];
-for i = 1:length(XC0)
-test(end+1,:) = R_01(1,2) >= XC0(i,1) & XC0(i,1) >= R_01(1,1) & ...
-R_01(2,2) >= XC0(i,2) & XC0(i,2) >= R_01(2,1) & ...
-R_01(3,2) >= XC0(i,3) & XC0(i,3) >= R_01(3,1);
-end

@@ -2,9 +2,10 @@ function [xstar,ystar] = ZS_get_C0(trueModel,surrogateModel,opts)
 %-------------------------------------------------------------------------------
 % Name:           ZS_get_C0
 % Purpose:        This function computes the C0-norm using particle swarm
-%                 optimization solver
+%                 optimization solver or discrete C0
 % Last Update:    12.09.2024
 %-------------------------------------------------------------------------------
+
 d          = opts.d;
 support    = opts.support;
 optim_opts = opts.optimOpts;
@@ -17,7 +18,7 @@ if ~isfield(optim_opts,"MaxIterations")
 end
 
 if ~isfield(optim_opts,"SwarmSize")
-    optim_opts.MaxIterations = min(300,20*d);
+    optim_opts.SwarmSize = min(300,20*d);
 end
 
 % For a levelset optimization
@@ -33,9 +34,7 @@ if levelOptim
     fun = @(x) modelPenalty(x,trueModel,surrogateModel,Input,level);
 
     % Initial points
-    X  = uq_getSample(Input,10^6);
-    fX = uq_evalPDF(X,Input);
-    IP = fX >= level;
+    optim_opts.InitialPoints = getInitialPoints(Input,level,optim_opts.SwarmSize);
 else
     fun = @(x) -abs(uq_evalModel(trueModel,x) - uq_evalModel(surrogateModel,x));
 end
@@ -48,6 +47,7 @@ while true
     else
         optim_opts.MaxIterations = optim_opts.MaxIterations + 100*d;
         optim_opts.SwarmSize     = optim_opts.SwarmSize + 10*d;
+        optim_opts.InitialPoints = getInitialPoints(Input,level,optim_opts.SwarmSize);
         trials = trials + 1;
     end
 end
@@ -62,6 +62,10 @@ function Y = modelPenalty(X,trueModel,surrogateModel,uq_input,level)
     idx = pdf >= level;
     Y   = -abs(uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X));
     Y(~idx,:) = inf;
+end
+
+    function IP = getInitialPoints(uq_input,level,N)
+    IP = ZS_getSubsample(uq_input,level,N);
 end
 
 end

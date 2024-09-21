@@ -14,10 +14,5 @@ Input       = All_Inputs.(model);
 trueModel   = All_Models.(model);
 trueModelFE = All_Models.trussstructureFE;
 
-OPTS.Type             = 'Sensitivity';
-OPTS.Method           = 'Sobol';
-OPTS.Sobol.SampleSize = 100000;
-OPTS.Model            = trueModel;
-OPTS.Input            = Input;
-Sobol                 = uq_createAnalysis(OPTS);
-uq_display(Sobol)
+X = uq_getSample(Input,100000);
+Y = uq_evalModel(trueModel,X);

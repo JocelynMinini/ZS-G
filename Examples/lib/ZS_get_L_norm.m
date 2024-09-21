@@ -4,6 +4,14 @@ function [L,L_norm] = ZS_get_L_norm(trueModel,surrogateModel,opts)
 % Purpose:        This function computes the L-norm using MC simulation
 % Last Update:    12.09.2024
 %-------------------------------------------------------------------------------
+if ~isstruct(opts) % Perform discrete L1-norm
+    Y_True     = ZS_parallel_evalModel(trueModel,opts);
+    Y_Meta     = uq_evalModel(surrogateModel,opts);
+    [ystar,ix] = abs(Y_True-Y_Meta);
+    xstar      = opts(ix,:);
+    return
+end
+
 Input = opts.Input;
 N     = opts.NSamples;
 type  = opts.Type;
