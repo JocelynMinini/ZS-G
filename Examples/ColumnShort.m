@@ -2,6 +2,9 @@ clc
 clear 
 ZS_G
 uqlab
+clc
+
+t0 = tic;
 
 % Load all models and inputs
 All_Inputs = ZS_createInput_fun;
@@ -62,10 +65,12 @@ C0_Opts.d                        = size(Input.Marginals,2);
 C0_Opts.Input                    = Input;
 C0_Opts.Level                    = level;
 
-L1    = zeros(n,1);
-C0    = L1;
-LOO   = L1;
-XC0   = zeros(n,d);
+L1   = zeros(n,1);
+C0   = L1;
+LOO  = L1;
+XC0  = zeros(n,d);
+
+%p = parpool(64);
 
 for i = 1:n
     PCE                = uq_createModel(PCOpts{i},'-private');
@@ -73,34 +78,43 @@ for i = 1:n
     L1(i)              = ZS_get_L_norm(trueModel,PCE,L1_Opts);
     [XC0(i,:),C0(i)]   = ZS_get_C0(trueModel,PCE,C0_Opts);
 end
+%RES = ZS_storeResults('MATLAB',RES,LOO,L1,C0,XC0);
+%delete(p)
 
-
+%{
 %% Error analysis - FE model
+
+p = parpool(32);
 opts.Model    = trueModelFE;
-Replicates    = 1;
+Replicates    = 10;
+opts.nThread  = 32;
 PCOpts        = ZS_createPCOpts(opts,Replicates);
 n             = length(PCOpts);
 X_Validation  = ZS_getSubsample(Input,level,100);
-Y_FE          = ZS_parallel_evalModel(trueModelFE,X);
+Y_FE          = cell2mat(ZS_parallel_evalModel(trueModelFE,X_Validation));
 
-for i = n+1:n+length(PCOpts)
+for i = 1:length(PCOpts)
     PCE          = uq_createModel(PCOpts{i},'-private');
     Y_Meta       = uq_evalModel(PCE,X_Validation);
     
     % LOO error
-    LOO(i)       = PCE.Error.ModifiedLOO;
+    LOO(end+1)       = PCE.Error.ModifiedLOO;
 
     % C0 error
     [tempC0,idx] = max(abs(Y_FE-Y_Meta)); 
-    XC0(i,:)     = X_Validation(idx,:);
-    C0(i)        = tempC0; 
+    XC0(end+1,:)     = X_Validation(idx,:);
+    C0(end+1)        = tempC0; 
     
     % L1 error
-    L1(i)        = mean(abs(Y_FE-Y_Meta));
+    L1(end+1)        = mean(abs(Y_FE-Y_Meta));
 end
+%RES = ZS_storeResults('FE',RES,LOO,L1,C0,XC0);
 
 
+delete(p)
+toc(t0)
 
+%{
 %% Save results
 errors = {'LOO','L1','C0','XC0'};
 for i = 1:length(errors)
@@ -117,3 +131,5 @@ end
 
 filename = ['model_',model,'_',opts.MetaType,'_',char(string(opts.mu))];
 ZS_save(filename,RES)
+%}
+%}

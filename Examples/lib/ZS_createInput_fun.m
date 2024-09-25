@@ -148,6 +148,30 @@ Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
 
+% strip footer
+OPTS.Marginals(1).Type    = 'Lognormal';
+OPTS.Marginals(1).Moments = [26.940121601427000, 1.257048537624306];
+
+OPTS.Marginals(2).Type    = 'Lognormal';
+OPTS.Marginals(2).Moments = [19.689197994354807, 4.902973237913170];
+
+OPTS.Marginals(3).Type    = 'Lognormal';
+OPTS.Marginals(3).Moments = [21 0.08*21];
+
+OPTS.Marginals(4).Type    = 'Gaussian';
+OPTS.Marginals(4).Moments = [0.5 0.5*0.1];
+OPTS.Marginals(4).Bounds  = [0 inf];
+
+OPTS.Marginals(5).Type    = 'Gaussian';
+OPTS.Marginals(5).Moments = [1600 1600*0.15];
+
+OPTS.Copula.Type          = 'Gaussian';
+OPTS.Copula.Parameters    = [1 -0.92 0 0 0 ; -0.92 1 0 0 0; 0 0 1 0 0; 0 0 0 1 0; 0 0 0 0 1];
+
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+count = count + 1;
+
 % trussStructure
 OPTS.Marginals(1).Type    = 'Lognormal';
 OPTS.Marginals(1).Moments = [210 0.1*210]*1000000;
@@ -182,6 +206,4 @@ OPTS.Marginals(10).Moments = [50 0.15*50];
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
-
-
 end

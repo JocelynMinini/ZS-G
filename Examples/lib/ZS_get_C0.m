@@ -64,8 +64,9 @@ function Y = modelPenalty(X,trueModel,surrogateModel,uq_input,level)
     Y(~idx,:) = inf;
 end
 
-    function IP = getInitialPoints(uq_input,level,N)
+function IP = getInitialPoints(uq_input,level,N)
     IP = ZS_getSubsample(uq_input,level,N);
 end
 
+ystar = abs(ystar);
 end

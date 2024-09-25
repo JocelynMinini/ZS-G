@@ -13,8 +13,8 @@ OPTS.Marginals(1).Parameters = [0.5,0.1];
 OPTS.Marginals(2).Type       = 'Lognormal';
 OPTS.Marginals(2).Moments    = [0.5,0.05];
 
-OPTS.Copula.Type = 'Gaussian';
-OPTS.Copula.Parameters = [1 0.5; 0.5 1];
+%OPTS.Copula.Type = 'Gaussian';
+%OPTS.Copula.Parameters = [1 0.5; 0.5 1];
 
 Input = uq_createInput(OPTS,'-private');
 trueModel = Models.(modelName);
@@ -57,3 +57,4 @@ for i = 1:4
     MAT{end+1} = ZS_Grid2Plot(PCE,'mathematica',[0 1],[0 1]);
     ED{end+1}  = [PCE.ExpDesign.X,PCE.ExpDesign.Y];
 end
+

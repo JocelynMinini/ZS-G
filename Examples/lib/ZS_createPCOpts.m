@@ -6,9 +6,15 @@ input     = opts.Input;
 alpha     = opts.alpha;
 mu        = opts.mu;
 
+OPTS.Marginals = input.Marginals;
+OPTS.Marginals = rmfield(OPTS.Marginals,'Parameters');
+
+input_test = uq_createInput(OPTS,'-private');
+clear OPTS
+
 isFE = isequal(trueModel.Type,'uq_uqlink');
 if isFE
-    toEval = 'ZS_parallel_evalModel(trueModel,X_ED)';
+    toEval = 'cell2mat(ZS_parallel_evalModel(trueModel,X_ED))';
 else
     toEval = 'uq_evalModel(trueModel,X_ED)';
 end
@@ -59,7 +65,6 @@ end
 
 
 
-
 scenarios = {'Natural','Uniform','Smolyak','Isoprobabilistic'};
 
 PCOpts    = cell(1,(length(scenarios)-2)*replicates+2);
@@ -102,7 +107,7 @@ for k = 1:length(scenarios)
         case 'Uniform' % LHS design according to uniformly distributed points on HDR alpha
 
             for j = 1:replicates
-                PCOpts{count}.Input       = input;
+                PCOpts{count}.Input       = input_test;
                 X_ED                      = uq_getSample(U_input,N,'lhs','LHSiterations',20);
                 PCOpts{count}.ExpDesign.X = X_ED;
                 PCOpts{count}.ExpDesign.Y = eval(toEval);
@@ -129,7 +134,7 @@ for k = 1:length(scenarios)
 
         case 'Smolyak'
 
-            PCOpts{count}.Input       = input;
+            PCOpts{count}.Input       = input_test;
             X_ED                      = recGrid;
             PCOpts{count}.ExpDesign.X = X_ED;
             PCOpts{count}.ExpDesign.Y = eval(toEval);
@@ -144,19 +149,6 @@ for k = 1:length(scenarios)
 
     end
 
-end
-
-
-
-
-
-function Y = evalModel(trueModel,X)
-    switch trueModel.Type
-        case 'uq_default_model'
-            Y = uq_evalModel(trueModel,X);
-        case 'uq_uqlink'
-            Y = ZS_R_evalModel;
-    end
 end
 
 

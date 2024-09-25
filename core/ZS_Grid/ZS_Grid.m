@@ -74,16 +74,21 @@ methods
     %                 random vector
     % Last Update:    06.03.2024
     %-------------------------------------------------------------------------------
-    d               = self.Internal.Grid.Dimensions(2);
-    Input           = self.Internal.Validation.Mapping.opts.RandomVector;
-    alpha           = self.Internal.Validation.Mapping.opts.CI;
-    mapping         = self.Internal.Validation.Mapping.opts.Type;
-    [support,level,newInput] = self.get_credible_interval(Input,alpha);
+    d       = self.Internal.Grid.Dimensions(2);
+    Input   = self.Internal.Validation.Mapping.opts.RandomVector;
+    alpha   = self.Internal.Validation.Mapping.opts.CI;
+    mapping = self.Internal.Validation.Mapping.opts.Type;
+    HDR     = self.get_credible_interval(Input,alpha);
+
+    level   = HDR.Level;
+    support = HDR.Support;
 
     if strcmp(mapping,'Rectangular') || isnan(level)
         
-        grid = self.map_stretch(self.Internal.Grid.Unit_grid,support);
-        grid = self.map_translate(grid,support);
+        grid = self.Internal.Grid.Unit_grid;
+        grid = grid * HDR.S;
+        grid = grid / HDR.R;
+        grid = grid + HDR.M;
 
     elseif strcmp(mapping,'Isoprobabilistic')
 
@@ -93,14 +98,17 @@ methods
         self.Internal.Grid.Mapping.Circular.Unit = grid;
 
         OPTS.Marginals = uq_Marginals(d, 'Gaussian', [0,1]); % Define the standardized Gaussian space (zero-mean, unit variance)
-        U_Input = uq_createInput(OPTS,'-private');
+        U_Input        = uq_createInput(OPTS,'-private');
 
-        [U_support,U_level] = self.get_credible_interval(U_Input,alpha); % Compute the level bounding the Sl domain
+        tempHDR   = self.get_credible_interval(U_Input,alpha);
+        U_support = tempHDR.Support;
+        U_level   = tempHDR.Level;
+
         self.Internal.Grid.Mapping.Circular.Support = U_support;
         self.Internal.Grid.Mapping.Circular.Level   = U_level;
 
-        grid = self.map_stretch(grid,U_support);
-        grid = self.map_translate(grid,U_support);
+        grid = grid * tempHDR.S;
+
         self.Internal.Grid.Mapping.Circular.Alpha = grid; % Map the grid according to some confidence interval
         
         grid = uq_GeneralIsopTransform(grid,U_Input.Marginals,U_Input.Copula,Input.Marginals,Input.Copula); % Map the grid with the Nataf transform
@@ -111,10 +119,10 @@ methods
 
     self.Internal.Grid.Mapping.Type           = mapping;
     self.Internal.Grid.Mapping.Support        = support;
-    self.Internal.Grid.Mapping.Level          = level;
+    self.Internal.Grid.Mapping.Level          = HDR.Level;
     self.Internal.Grid.Mapping.CI             = alpha;
     self.Internal.Grid.Mapping.RandomVector   = Input;
-    self.Internal.Grid.Mapping.U_RandomVector = newInput;
+    self.Internal.Grid.Mapping.HDR            = rmfield(HDR,{'Level','Support'});
     self.Grid                                 = grid;
     end
 
@@ -152,7 +160,7 @@ methods
             [X1,X2,X3,Z] = ZS_Grid2Plot(pdf,'matlab',support(1,:),support(2,:),support(3,:));
             figure
             lvls = linspace(level,max(Z,[],'all'),20);
-            contourslice(X1,X2,X3,Z,mu(1),mu(2),mu(3),lvls)
+            contourslice(X1,X2,X3,Z,mu(1)-2,mu(2),mu(3),lvls)
             colorbar
             view(3)
             hold on
@@ -223,7 +231,7 @@ end
 
 methods (Static)
 
-    function [support,level,new_uq_input,solver_ouput] = get_credible_interval(uq_input,alpha)
+    function HDR = get_credible_interval(uq_input,alpha)
     %-------------------------------------------------------------------------------
     % Name:           get_credible_interval
     % Purpose:        Stretch the unit_grid over the intervals given by
@@ -278,13 +286,17 @@ methods (Static)
         [level,~,~,solver_ouput] = fzero(fun,[0 max(f,[],'all')]);
         % sanity check in 2d : l = alpha/(2*pi*sig1*sig2);
         % Select the points inside of the region
-        index_level = f>level;
+        X_alpha = X(f>level,:);
+
+        % Get the transformation matrices
+        [R,S,M] = ZS_Grid.get_Transform(uq_input,X_alpha);
+
         % Make the hypercube of the boundary points
-        [minA,MaxA] = bounds(X(index_level,:),1);
-        support = [minA;MaxA]';
-    
+        support = ZS_Grid.get_Bounds(X_alpha);
+       
         % Overwrite the support if the input is 'uniform' (for accuracy)
         support(index,:) = param(index,:);
+
     end
 
     for i = 1:d
@@ -293,6 +305,13 @@ methods (Static)
     end
     new_uq_input = uq_createInput(OPTS,'-private');
 
+    HDR.Level       = level;
+    HDR.Support     = support; 
+    HDR.R           = R;
+    HDR.S           = S;
+    HDR.M           = M;
+    HDR.Input_alpha = new_uq_input;
+    HDR.Solver      = solver_ouput;
 
     function out = fun_indicator(level,ci,f)
         N = size(f,1);
@@ -303,6 +322,7 @@ methods (Static)
     end
 
     end
+
 
     function index = get_all_uniform(uq_input)
     %-------------------------------------------------------------------------------
@@ -315,47 +335,57 @@ methods (Static)
     index = (cellfun(@(x) strcmp(x,'Uniform'),dist))';
     end
 
-    function mapped_grid = map_stretch(grid,support)
+    function R = get_Bounds(A)
     %-------------------------------------------------------------------------------
-    % Name:           map_stretch
-    % Purpose:        Stretch the unit_grid over the intervals given by
-    %                 'support'
-    % Last Update:    07.03.2024
+    % Name:           get_Bounds
+    % Purpose:        Return the bounds of a dataset
+    % Last Update:    24.09.2024
     %-------------------------------------------------------------------------------
-    d = size(grid,2);
-    if d ~= size(support,1)
-        error("The dimension of the support and of the grid must match")
+    [minA,MaxA] = bounds(A,1);
+    R = [minA;MaxA]';
     end
 
-    % Transpose the grid
-    grid = grid';
+    function [R,S,M] = get_Transform(uq_input,X_alpha)
+    %-------------------------------------------------------------------------------
+    % Name:           get_Transform
+    % Purpose:        Return the rotation matrix R, the strech matrix and
+    %                 the translation vector M
+    % Last Update:    24.09.2024
+    %-------------------------------------------------------------------------------
+    d       = size(uq_input.Marginals,2);
+    moments = [uq_input.Marginals.Moments];
+    muX     = moments(1:2:length(moments));
+    tempX   = X_alpha;
+
     
-    % Built the transformation matrix
-    A = eye(d).*(support(:,2)-support(:,1))/2;
-
-    % And map
-    mapped_grid = (A*grid)';
+    if isequal(uq_input.Copula.Type,'Independent')
+        R = eye(d);
+    else
+        C       = cov(X_alpha);
+        %[R,~] = eig(C);
+        var     = diag(C);
+        [~,idx] = sort(var);
+        [~,~,R] = svd(C);
+        R       = R(:,idx);
     end
 
-    function mapped_grid = map_translate(grid,support)
-    %-------------------------------------------------------------------------------
-    % Name:           map_translate
-    % Purpose:        Translate the unit_grid on the center given by 'support'
-    % Last Update:    07.03.2024
-    %-------------------------------------------------------------------------------
-    d = size(grid,2);
-    if d ~= size(support,1)
-        error("The dimension of the support and of the grid must match")
-    end
-
-    % Transpose the grid
-    grid = grid';
+    % Shift to [0]^d accord to the mean
+    tempX = tempX-muX;
     
-    % Built the transformation matrix
-    A = (support(:,1)+support(:,2))/2;
+    % Rotate according to pca
+    tempX = tempX*R;
 
-    % And map
-    mapped_grid = (grid + A)';
+    % Compute the offset for centering
+    D      = ZS_Grid.get_Bounds(tempX);
+    offset = (sum(D,2)/2)';
+    tempX  = tempX-offset;
+
+    % Compute the strech matrix
+    D = ZS_Grid.get_Bounds(tempX);
+    S = eye(d).*abs(D(:,1));
+
+    % This is the translation vector
+    M = muX + offset/R;
     end
 
     function mapped_grid = map_equidistributed(grid)

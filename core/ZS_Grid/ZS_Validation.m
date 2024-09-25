@@ -314,7 +314,7 @@ methods
         return
     end
 
-    set = {'Rectangular','Isoprobabilistic'};
+    set = {'Rectangular','Correlated','Isoprobabilistic'};
     [success,ErrMsg] = self.check_belongs(opts.Mapping.Type,set);
     if ~success
         self.Mapping.check  = false;
