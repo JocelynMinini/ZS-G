@@ -6,12 +6,6 @@ input     = opts.Input;
 alpha     = opts.alpha;
 mu        = opts.mu;
 
-OPTS.Marginals = input.Marginals;
-OPTS.Marginals = rmfield(OPTS.Marginals,'Parameters');
-
-input_test = uq_createInput(OPTS,'-private');
-clear OPTS
-
 isFE = isequal(trueModel.Type,'uq_uqlink');
 if isFE
     toEval = 'cell2mat(ZS_parallel_evalModel(trueModel,X_ED))';
@@ -40,14 +34,29 @@ OPTS.Basis.PNorm  = 1;
 this     = ZS_createGrid(OPTS);
 recGrid  = this.Grid;
 support  = this.Internal.Grid.Mapping.Support;
+R        = this.Internal.Grid.Mapping.HDR.R;
+S        = this.Internal.Grid.Mapping.HDR.S;
+M        = this.Internal.Grid.Mapping.HDR.M;
+
+%{
+X_alpha  = uq_getSample(input,10^5);
+fX_alpha = uq_evalPDF(X_alpha,input);
+X_alpha  = X_alpha(fX_alpha>this.Internal.Grid.Mapping.Level,:);
+scatter3(X_alpha(:,1),X_alpha(:,2),X_alpha(:,3))
+hold on
+scatter3(recGrid(:,1),recGrid(:,2),recGrid(:,3))
+%}
+
+for i = 1:d
+    OPTS.Marginals(i).Type       = 'Uniform';
+    OPTS.Marginals(i).Parameters = [-1,1];
+end
+U_input = uq_createInput(OPTS,'-private');
 
 OPTS.Mapping.Type = 'Isoprobabilistic';
 this              = ZS_createGrid(OPTS);
 isoGrid           = this.Grid;
 clear OPTS
-
-% Get the uniform input over support
-U_input = this.Internal.Grid.Mapping.U_RandomVector;
 
 
 % Set the max degree such that ratio > 1.5
@@ -107,8 +116,11 @@ for k = 1:length(scenarios)
         case 'Uniform' % LHS design according to uniformly distributed points on HDR alpha
 
             for j = 1:replicates
-                PCOpts{count}.Input       = input_test;
+                PCOpts{count}.Input       = input;
                 X_ED                      = uq_getSample(U_input,N,'lhs','LHSiterations',20);
+                X_ED = X_ED * S;
+                X_ED = X_ED / R;
+                X_ED = X_ED + M;
                 PCOpts{count}.ExpDesign.X = X_ED;
                 PCOpts{count}.ExpDesign.Y = eval(toEval);
                 count = count + 1;
@@ -134,7 +146,7 @@ for k = 1:length(scenarios)
 
         case 'Smolyak'
 
-            PCOpts{count}.Input       = input_test;
+            PCOpts{count}.Input       = input;
             X_ED                      = recGrid;
             PCOpts{count}.ExpDesign.X = X_ED;
             PCOpts{count}.ExpDesign.Y = eval(toEval);

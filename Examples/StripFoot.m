@@ -4,19 +4,16 @@ ZS_G
 uqlab
 clc
 
-t0 = tic;
-
 % Load all models and inputs
 All_Inputs = ZS_createInput_fun;
 All_Models = ZS_createModel_fun;
 
-model = 'shortcolumn';
+model = 'stripfoot';
 
 Input       = All_Inputs.(model);
 trueModel   = All_Models.(model);
-trueModelFE = All_Models.shortcolumnFE;
+trueModelFE = All_Models.([model,'FE']);
 
-d = size(Input.Marginals,2);
 clear All_Models All_Inputs
 
 %% Sensitivity analysis
@@ -24,7 +21,7 @@ OPTS.Type                  = 'Sensitivity';
 OPTS.Method                = 'Kucherenko';
 OPTS.Model                 = trueModel;
 OPTS.Input                 = Input;
-OPTS.Kucherenko.SampleSize = 100000;
+OPTS.Kucherenko.SampleSize = 10000;
 OPTS.Kucherenko.Sampling   = 'lhs';
 Kucherenko                 = uq_createAnalysis(OPTS,'-private');
 clear OPTS
@@ -32,17 +29,29 @@ clear OPTS
 RES.Sensitivity.Total = Kucherenko.Results.Total;
 RES.Sensitivity.First = Kucherenko.Results.FirstOrder;
 
+%% Redefining the input
+keep = [1 2 5]; % keep these variables
+rmv  = setdiff(1:length(Input.Marginals),keep); % remove these
+
+OPTS.Marginals = Input.Marginals(keep);
+OPTS.Marginals = rmfield(OPTS.Marginals,{'Parameters','Bounds'});
+
+OPTS.Copula                   = Input.Copula;
+OPTS.Copula.Parameters(rmv,:) = [];
+OPTS.Copula.Parameters(:,rmv) = [];
+OPTS.Copula                   = rmfield(OPTS.Copula,'Variables');
+
+reducedInput = uq_createInput(OPTS,'-private');
+clear OPTS
+d = size(reducedInput.Marginals,2);
 
 %% Common options both analytical and FE
 metaType   = 'PCE';
 mu         = 6;
 alpha      = 0.05;
-
-% Highest density region 1% (Error region)
-HDR        = ZS_Grid.get_credible_interval(Input,0.01);
+HDR        = ZS_Grid.get_credible_interval(reducedInput,0.01);
 R_01       = HDR.Support;
 level      = HDR.Level;
-errorInput = HDR.Input_alpha;
 
 %% Error analysis - Analytical model
 % Options for surrogate model
@@ -50,22 +59,22 @@ opts.MetaType = metaType;
 opts.alpha    = alpha;
 opts.mu       = mu;
 opts.Model    = trueModel;
-opts.Input    = Input;
-Replicates    = 1;
+opts.Input    = reducedInput;
+Replicates    = 10;
 PCOpts        = ZS_createPCOpts(opts,Replicates);
 n             = length(PCOpts);
 
 % Options for L1 norm
 L1_Opts.Method   = 'Continous';
 L1_Opts.Type     = 'L1';
-L1_Opts.Input    = Input;
+L1_Opts.Input    = reducedInput;
 L1_Opts.NSamples = 10^5;
 L1_Opts.Level    = level;
 
 % Options for C0 solver
 C0_Opts.Method                   = 'Continous';
 C0_Opts.Support                  = R_01;
-C0_Opts.Input                    = Input;
+C0_Opts.Input                    = reducedInput;
 C0_Opts.Level                    = level;
 C0_Opts.optimOpts.Display        = 'off';
 C0_Opts.optimOpts.SwarmSize      = 300;
@@ -128,4 +137,4 @@ try
 delete(p)
 end
 
-ZS_save('model_ShortColumn.mat',RES)
+ZS_save('model_Stripfoot.mat',RES)

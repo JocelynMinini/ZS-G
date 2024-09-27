@@ -4,55 +4,77 @@ function [L,L_norm] = ZS_get_L_norm(trueModel,surrogateModel,opts)
 % Purpose:        This function computes the L-norm using MC simulation
 % Last Update:    12.09.2024
 %-------------------------------------------------------------------------------
-if ~isstruct(opts) % Perform discrete L1-norm
-    Y_True     = ZS_parallel_evalModel(trueModel,opts);
-    Y_Meta     = uq_evalModel(surrogateModel,opts);
-    [ystar,ix] = abs(Y_True-Y_Meta);
-    xstar      = opts(ix,:);
-    return
+if ~isfield(opts,'Method')
+    error("Options must contain the field 'Method'.")
 end
 
-Input = opts.Input;
-N     = opts.NSamples;
-type  = opts.Type;
-
-distType = {Input.Marginals.Type};
-if isequal(distType{:},'Uniform')
-    X       = uq_getSample(Input,1);
-    pdf_val = uq_evalPDF(X,Input);
-    X       = uq_getSample(Input,N,'lhs');
-    idx     = ones(N,1);
-else
-    X       = uq_getSample(Input,N,'lhs');
-    pdf_val = uq_evalPDF(X,Input);
-    level   = opts.Level;
-    idx     = pdf_val >= level;
+if ~isfield(opts,'Type')
+    error("Options must contain the field 'Type'.")
 end
 
+method = opts.Method;
+type   = opts.Type;
 
-switch type
-    case 'L1'
-        fun = @(X) abs(uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X));
-    case 'L2'
-        fun = @(X) (uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X)).^2;
+switch method
 
-    otherwise
-        error("Type must be 'L1' or 'L2'")
-end
+    case 'Discrete'
+        X_Validation = opts.X_Validation;
+        Y_True       = opts.Y_Validation;
+        Y_Meta       = uq_evalModel(surrogateModel,X_Validation);
+        switch type
+            case 'L1'
+                Y = abs(Y_True-Y_Meta);
+            case 'L2'
+                Y = abs(Y_True-Y_Meta);
+            otherwise
+                error("Type must be 'L1' or 'L2'")
+        end
+        L      = mean(Y);
+        L_norm = L/mean(Y_True);
     
-int     = mean(idx.*(fun(X)./pdf_val));
-ybar    = mean(uq_evalModel(trueModel,X));
+    case 'Continous'
 
-switch type
-    case 'L1'
-        % null
-    case 'L2'
-        int = sqrt(int);
-
+        Input = opts.Input;
+        N     = opts.NSamples;
+        
+        distType = {Input.Marginals.Type};
+        if isequal(distType{:},'Uniform')
+            X       = uq_getSample(Input,1);
+            pdf_val = uq_evalPDF(X,Input);
+            X       = uq_getSample(Input,N,'lhs');
+            idx     = ones(N,1);
+        else
+            X       = uq_getSample(Input,N,'lhs');
+            pdf_val = uq_evalPDF(X,Input);
+            level   = opts.Level;
+            idx     = pdf_val >= level;
+        end
+        
+        
+        switch type
+            case 'L1'
+                fun = @(X) abs(uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X));
+            case 'L2'
+                fun = @(X) (uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X)).^2;
+            otherwise
+                error("Type must be 'L1' or 'L2'")
+        end
+            
+        int     = mean(idx.*(fun(X)./pdf_val));
+        ybar    = mean(uq_evalModel(trueModel,X));
+        
+        switch type
+            case 'L1'
+                % null
+            case 'L2'
+                int = sqrt(int);
+        
+            otherwise
+                error("Type must be 'L1' or 'L2'")
+        end
+        L      = int;
+        L_norm = int/ybar;
     otherwise
-        error("Type must be 'L1' or 'L2'")
-end
-L      = int;
-L_norm = int/ybar;
+        error("The field 'Method' must be 'Continous' or 'Discrete'.")
 end
 

@@ -174,16 +174,16 @@ count = count + 1;
 
 % trussStructure
 OPTS.Marginals(1).Type    = 'Lognormal';
-OPTS.Marginals(1).Moments = [210 0.1*210]*1000000;
+OPTS.Marginals(1).Moments = [210 0.1*210];
 
 OPTS.Marginals(2).Type    = 'Lognormal';
-OPTS.Marginals(2).Moments = [210 0.1*210]*1000000;
+OPTS.Marginals(2).Moments = [210 0.1*210];
 
 OPTS.Marginals(3).Type    = 'Lognormal';
-OPTS.Marginals(3).Moments = [2 0.1*2]*0.001;
+OPTS.Marginals(3).Moments = [20 0.1*20];
 
 OPTS.Marginals(4).Type    = 'Lognormal';
-OPTS.Marginals(4).Moments = [1 0.1*1]*0.001;
+OPTS.Marginals(4).Moments = [10 0.1*10];
 
 OPTS.Marginals(5).Type    = 'Gumbel';
 OPTS.Marginals(5).Moments = [50 0.15*50];
