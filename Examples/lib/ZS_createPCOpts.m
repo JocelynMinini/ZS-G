@@ -66,7 +66,7 @@ MaxDegree = 1;
 while true
     P     = nchoosek(d+MaxDegree,MaxDegree);
     ratio = N/P;
-    if ratio < 1.5
+    if ratio < 1
         break
     end
     MaxDegree = MaxDegree + 1;
@@ -88,6 +88,7 @@ switch metaType
     case 'PCE'
         OPTS.TruncOptions.qNorm = 1;
         OPTS.Degree             = 1:MaxDegree;
+        
         OPTS.DegreeEarlyStop    = false;
         OPTS.qNormEarlyStop     = false;
         OPTS.Method             = 'OLS';

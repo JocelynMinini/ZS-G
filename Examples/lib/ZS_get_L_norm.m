@@ -60,15 +60,14 @@ switch method
                 error("Type must be 'L1' or 'L2'")
         end
             
-        int     = mean(idx.*(fun(X)./pdf_val));
-        ybar    = mean(uq_evalModel(trueModel,X));
+        int  = mean(idx.*fun(X)./pdf_val);
+        ybar = mean(uq_evalModel(trueModel,X));
         
         switch type
-            case 'L1'
-                % null
-            case 'L2'
-                int = sqrt(int);
-        
+            case 'L1' % Normalized L1
+                int = int / mean(idx./pdf_val);
+            case 'L2' % Normalized L2
+                int = sqrt(int) / sqrt(mean(idx./pdf_val));
             otherwise
                 error("Type must be 'L1' or 'L2'")
         end

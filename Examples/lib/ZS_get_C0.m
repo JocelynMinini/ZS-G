@@ -85,7 +85,7 @@ function Y = modelPenalty(X,trueModel,surrogateModel,uq_input,level)
     pdf = uq_evalPDF(X,uq_input);
     idx = pdf >= level;
     Y   = -abs(uq_evalModel(trueModel,X) - uq_evalModel(surrogateModel,X));
-    Y(~idx,:) = inf;
+    Y(~idx,:) = NaN;
 end
 
 end

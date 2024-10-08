@@ -69,12 +69,48 @@ Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
 
+% pile model L&H
+OPTS.Marginals(1).Name       = 'D';
+OPTS.Marginals(1).Type       = 'Uniform';
+OPTS.Marginals(1).Parameters = [0.3 1.5];
+
+OPTS.Marginals(2).Name       = 'L';
+OPTS.Marginals(2).Type       = 'Uniform';
+OPTS.Marginals(2).Parameters = [5 30];
+
+OPTS.Marginals(3).Name       = '\varphi';
+OPTS.Marginals(3).Type       = 'Lognormal';
+OPTS.Marginals(3).Parameters = [3.320831044575535,0.110138178422313];
+
+OPTS.Marginals(4).Name       = 'c';
+OPTS.Marginals(4).Type       = 'Lognormal';
+OPTS.Marginals(4).Parameters = [3.166594737484777,0.376005920632659];
+
+OPTS.Marginals(5).Name       = '\gamma';
+OPTS.Marginals(5).Type       = 'Lognormal';
+OPTS.Marginals(5).Moments    = [20.8,0.1*20.8];
+
+OPTS.Marginals(6).Name       = 'H_{w}';
+OPTS.Marginals(6).Type       = 'Lognormal';
+OPTS.Marginals(6).Moments    = [2,0.1*2];
+
+OPTS.Marginals(7).Name       = 'F';
+OPTS.Marginals(7).Type       = 'Gumbel';
+OPTS.Marginals(7).Moments    = [1300,0.15*1300];
+
+Inputs.(names{count})        = uq_createInput(OPTS,'-private');
+clear OPTS
+
+count = count + 1;
+
 % rastrigin
 d = 2;
 OPTS.Marginals = uq_Marginals(d, 'Uniform', [-5.12,5.12]);
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
+
+
 
 % shortcolumn
 OPTS.Marginals(1).Type    = 'Lognormal';
@@ -202,6 +238,35 @@ OPTS.Marginals(9).Moments = [50 0.15*50];
 
 OPTS.Marginals(10).Type    = 'Gumbel';
 OPTS.Marginals(10).Moments = [50 0.15*50];
+
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+count = count + 1;
+
+% tunnel
+OPTS.Marginals(1).Type    = 'Lognormal';
+OPTS.Marginals(1).Moments = [29 0.1*29];
+
+OPTS.Marginals(2).Type    = 'Lognormal';
+OPTS.Marginals(2).Moments = [600 0.15*600];
+
+OPTS.Marginals(3).Type    = 'Lognormal';
+OPTS.Marginals(3).Moments = [10 0.3*10];
+
+OPTS.Marginals(4).Type    = 'Lognormal';
+OPTS.Marginals(4).Moments = [0.25 0.1*0.25];
+
+OPTS.Marginals(5).Type    = 'Lognormal';
+OPTS.Marginals(5).Moments = [27 0.08*27];
+
+OPTS.Marginals(6).Type       = 'Uniform';
+OPTS.Marginals(6).Parameters = [2 5];
+
+OPTS.Marginals(7).Type       = 'Uniform';
+OPTS.Marginals(7).Parameters = [790 810];
+
+OPTS.Marginals(8).Type       = 'Uniform';
+OPTS.Marginals(8).Parameters = [0.4 0.8];
 
 Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS

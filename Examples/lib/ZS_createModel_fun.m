@@ -72,5 +72,21 @@ OPTS.ExecutionPath = fullfile(ZS_G_rootPath,'Examples');
 
 Models.stripfootFE = ZS_createModel(OPTS);
 
+% Pile FE model
+path = strsplit(ZS_G_rootPath,'\');
+path = path(1:end-2);
+path = fullfile(path{:},'8_ZSoil','4_Pile');
+
+OPTS.Name        = 'Pile';
+OPTS.Parser.Name = 'PileParser';
+OPTS.Parser.Path = path;
+
+OPTS.Template.Path = path;
+addpath(path)
+
+OPTS.ExecutionPath = fullfile(ZS_G_rootPath,'Examples');
+
+Models.pileFE = ZS_createModel(OPTS);
+
 
 end

@@ -17,7 +17,8 @@ Input = uq_createInput(OPTS,'-private');
 Model   = Models.(modelName);
 
 % Find the level
-[~,level] = ZS_Grid.get_credible_interval(Input,0.05);
+HDR = ZS_Grid.get_credible_interval(Input,0.05);
+level = HDR.Level;
 
 clear OPTS Models Inputs
 
@@ -55,8 +56,9 @@ OPTS.isVectorized = true;
 meta = uq_createModel(OPTS,'-private');
 
 % Options for L1 norm
+L1_Opts.Method   = 'Continous';
 L1_Opts.Input    = Input;
-L1_Opts.NSamples = 10^6;
+L1_Opts.NSamples = 10^5;
 L1_Opts.Type     = 'L1';
 L1_Opts.Level    = level;
 

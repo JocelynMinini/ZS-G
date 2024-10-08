@@ -45,6 +45,19 @@ RES.(modelName).X        = X;
 RES.(modelName).Y_MATLAB = uq_evalModel(trueModel,X);
 %RES.(modelName).Y_FE     = ZS_parallel_evalModel(trueModelFE,X);
 
+%% Pile model
+modelName   = 'pile';
+trueModel   = Models.(modelName);
+trueModelFE = Models.([modelName,'FE']);
+
+X = createVector2d(10, [0.4 1.5], [5 30]);
+X = [X(:,1) X(:,2) repmat(30,length(X),1) repmat(5000,length(X),1)];
+
+RES.(modelName).X        = X;
+RES.(modelName).Y_MATLAB = uq_evalModel(trueModel,X);
+%RES.(modelName).Y_FE     = ZS_parallel_evalModel(trueModelFE,X);
+
+
 
 
 

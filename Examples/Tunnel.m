@@ -2,28 +2,43 @@ clc
 clear 
 ZS_G
 uqlab
-
+clc
 t0 = tic;
 
 % Load all models and inputs
 All_Inputs = ZS_createInput_fun;
 All_Models = ZS_createModel_fun;
 
-model = 'trussstructure';
+model = 'tunnel';
 
 Input       = All_Inputs.(model);
 trueModel   = All_Models.(model);
-trueModelFE = All_Models.trussstructureFE;
+%trueModelFE = All_Models.([model,'FE']);
 
 clear All_Models All_Inputs
 clc
 
 %% Sensitivity analysis
-RES.Sensitivity.Total = [0.374 0.0126 0.371 0.0125 0.004 0.0377 0.0777 0.0778 0.0376 0.0047];
-RES.Sensitivity.First = [0.3638 0.0051 0.3624 0.0055 -0.0019 0.02922 0.0717 0.0692 0.0297 -0.0025];
+%{
+OPTS.Type                  = 'Sensitivity';
+OPTS.Method                = 'Sobol';
+OPTS.Model                 = trueModel;
+OPTS.Input                 = Input;
+OPTS.Sobol.SampleSize      = 100000;
+OPTS.Sobol.Sampling        = 'lhs';
+Kucherenko                 = uq_createAnalysis(OPTS,'-private');
+clear OPTS
+
+RES.Sensitivity.Total = Kucherenko.Results.Total;
+RES.Sensitivity.First = Kucherenko.Results.FirstOrder;
+%}
+
+RES.Sensitivity.Total = [0.0549221397294056 0.00101788965498939 0.326082695923257 0.000733436570370505 0.0295918177621310 0.226681801069092 0.000240434702789560 0.482881794532767];
+RES.Sensitivity.First = [0.0169018698538586 0.00263923132288153 0.263879293345380 0.00227473977030512 0.0185174271965168 0.176260609943854 0.00253947596818229 0.385939614264741];
+
 
 %% Redefining the input
-keep = [1 3]; % keep these variables
+keep = [3 6 8]; % keep these variables
 rmv  = setdiff(1:length(Input.Marginals),keep); % remove these
 
 OPTS.Marginals = Input.Marginals(keep);
@@ -41,7 +56,6 @@ R_01       = HDR.Support;
 level      = HDR.Level;
 
 %% Error analysis - Analytical model
-rng("default")
 % Options for surrogate model
 opts.MetaType = metaType;
 opts.alpha    = alpha;
@@ -63,14 +77,14 @@ C0_Opts.Input                    = reducedInput;
 C0_Opts.Level                    = level;
 C0_Opts.optimOpts.Display        = 'off';
 C0_Opts.optimOpts.SwarmSize      = 300;
-C0_Opts.optimOpts.UseVectorized  = false;
+C0_Opts.optimOpts.UseVectorized  = true;
 
 try
 p = parpool(64);
 end
 
 fprintf('\n\n')
-fprintf('   MU = [')
+fprintf('MU = ')
 
 mu = 1;
 while true
@@ -95,10 +109,6 @@ while true
 
     parfor i = 1:n
         PCE              = uq_createModel(PCOpts{i},'-private');
-        [minLOO,idx]     = min(PCE.Internal.PCE.OLS.LOO);
-        if PCE.Internal.PCE.Degree ~= PCE.Internal.PCE.DegreeArray(idx)
-            disp('DEGREE ADAPTIVITY FAILS !')
-        end
         LOO(i)           = PCE.Error.ModifiedLOO;
         Degree(i)        = PCE.Internal.PCE.BestDegree;
         MaxDegree(i)     = max(PCE.Internal.PCE.DegreeArray);
@@ -110,7 +120,9 @@ while true
     mu = mu + 1;
 
 end
-ZS_save('Trussstructure_analytical_01.mat',RES)
+fprintf('\n\n')
+ZS_save('Tunnel_analytical_01.mat',RES)
 try
 delete(p)
 end
+toc(t0)
