@@ -1,114 +1,92 @@
-function OUT = ZS_RandomVectorPlot(uq_input,alpha,levels)
-
-if ~isa(uq_input,'uq_input')
+function OUT = ZS_RandomVectorPlot(uq_input, alpha)
+if ~isa(uq_input, 'uq_input')
     error("First argument must be a 'uq_input'.")
 end
 
-d         = size(uq_input.Marginals,2);
-n_points = 100;
+alpha = sort(alpha,'descend');
 
-support = ZS_Grid.get_credible_interval(uq_input,alpha);
+% Dimension of the problem
+d = length(uq_input.Marginals);
 
-for i = 1:length(levels)
-    [~,levels(i)] = ZS_Grid.get_credible_interval(uq_input,levels(i));
-end
+% Compute the highest density region for having an interval 'support' in each dimension
+HDR = ZS_Grid.get_credible_interval(uq_input, min(alpha));
+support = HDR.Support;
 
-%{
-vectors = cell(1, d);
+% Create a matrix of indices for plotting combinations
+idx = [];
 for i = 1:d
-    vectors{i} = linspace(support(i, 1), support(i, 2), n_points);
-end
-
-% n-Multidimensional grid
-[grid_vectors{1:d}] = ndgrid(vectors{:});
-X  = cell2mat(cellfun(@(x) x(:), grid_vectors, 'UniformOutput', false));
-fX = uq_evalPDF(X,uq_input);
-%}
-
-% Matrix of indices
-idx = []; 
-for i = 1:d
-    temp = [i * ones(i, 1), (1:i)'];
+    temp = [i * ones(d, 1), (1:d)'];
     idx = [idx; temp];
 end
 
-idx = idx(:,[2 1]);
+% Remove duplicate pairs and keep combinations where the first index <= second index
+idx = unique(sort(idx, 2), 'rows');
 
-moments = [uq_input.Marginals.Moments];
-moments = reshape(moments,[2,d]);
+% Initialize output cell array
+OUT = cell(size(idx, 1), 2);
 
-muX     = moments(1,:);
-count = 1;
+for idx_pair = 1:size(idx, 1)
+    i = idx(idx_pair, 1);
+    j = idx(idx_pair, 2);
 
-OUT = cell(size(idx,1),1);
+    if i == j  % Diagonal elements: Marginal densities
+        % Generate points over the support
+        x_values = linspace(support(i, 1), support(i, 2), 1000)';
 
-for i = 1:size(idx,1)
-    if idx(i,1) == idx (i,2) % diagonal
-        baseStr = strtrim(repmat(' muX(%d) ', 1, d));
-        strParts        = strsplit(sprintf(baseStr, 1:d), ' ');
-        strParts{count} = 'x';
-        toEval          = ['@(x) uq_evalPDF([', strjoin(strParts, ' '), '],uq_input)'];
-        f               = eval(toEval);
+        % Evaluate the marginal density using the marginal's PDF
+        MarginalDist = uq_input.Marginals(i);
+        y_values = uq_all_pdf(x_values, MarginalDist);
 
-        OUT{i} = ZS_Grid2Plot(f,'mathematica',support(count,:));
+        % Store the results
+        OUT{idx_pair,1} = [x_values, y_values];
 
-        count = count + 1;
-    else
+    else  % Off-diagonal elements: Joint marginal densities using Monte Carlo
 
-        x1      = linspace(support(idx(i,1),1),support(idx(i,1),2),100);
-        x2      = linspace(support(idx(i,2),1),support(idx(i,2),2),100);
-        [X1,X2] = meshgrid(x1(:), x2(:));
-        xi      = [X1(:),X2(:)];
+        % Defined the projected input
+        OPTS.Marginals         = rmfield(uq_input.Marginals([i j]),'Moments');
+        OPTS.Copula.Type       = uq_input.Copula.Type;
+        OPTS.Copula.Parameters = uq_input.Copula.Parameters([i j],[i j]);
 
-
-        % Nombre d'échantillons Monte Carlo pour les dimensions restantes
-        n_mc_samples = 10000;  % Ajuster pour la précision souhaitée
+        tempInput = uq_createInput(OPTS,'-private');
         
-        % Tableau pour stocker la densité marginale
-        fX = zeros(size(xi, 1), 1);
         
-        % Boucle sur chaque point projeté pour estimer la densité marginale
-        for j = 1:size(xi, 1)
-            % Générer n_mc_samples échantillons pour les dimensions restantes (3 à d)
-            X_rest = uq_getSample(uq_input, n_mc_samples);
-            
-            % Créer les échantillons complets en fixant x1 et x2 et en générant aléatoirement les autres dimensions
-            X_full = [repmat(xi(j, :), n_mc_samples, 1), X_rest(:, 3:end)];
-            
-            % Évaluer la densité complète en ces points
-            f_full = uq_evalPDF(X_full, uq_input);
-            
-            % Calculer la moyenne des densités pour estimer la densité marginale
-            fX(j) = mean(f_full);
+        uniformIdx = ZS_Grid.get_all_uniform(tempInput);
+        allUniform = all( uniformIdx );
+        % Compute the levels corresponding to the user-defined probabilities
+        for o = 1:length(alpha)
+            if allUniform
+                modifiedLevels(o) = eps;
+            else
+                % Return the support first
+                alphaTemp = alpha(o);
+                HDR = ZS_Grid.get_credible_interval(uq_input, alphaTemp);
+                support = HDR.Support;
+                % Then compute
+                tempIdx = [i j];
+                tempIdx = tempIdx(~uniformIdx');
+                maxVal = min(support(tempIdx,:),[],'all');
+                idxMax = support([i j],:) == maxVal;
+                fun     = @(x) (helper(tempInput,x,idxMax)-maxVal)^2;
+                x       = fminbnd(fun,0,1);
+                tempHDR = ZS_Grid.get_credible_interval(tempInput, x);
+                modifiedLevels(o) = tempHDR.Level;
+                
+            end
         end
+        
+        OUT{idx_pair,2} = flip(modifiedLevels);
 
-
-        OUT{i} = [xi,fX];
-
-        %{
-        notidx             = setdiff(1:d,idx(i,:));
-        baseStr            = strtrim(repmat(' muX(%d) ', 1, d));
-        strParts           = strsplit(sprintf(baseStr, 1:d), ' ');
-
-        inner              = strParts;
-        inner(idx(i,:))    = {'x(1)','x(2)'};
-        inner(notidx)      = {'z'};
-        inner              = strjoin(inner);
-
-        outer              = strjoin(strParts(notidx));
-
-        %toEval            = ['@(x) uq_evalPDF([', strjoin(strParts(idx(i,:)), ' '), '],uq_input)'];
-        toEval             = ['@(x) sum(arrayfun(@(z) uq_evalPDF([',inner,'], uq_input), ',outer,'))'];
-        f                  = eval(toEval);
-
-        OUT{i} = ZS_Grid2Plot(f,'mathematica',support(idx(i,1),:),support(idx(i,2),:));
-        %}
+        % Then create the pdf-vector
+        pdfFun = @(x) uq_evalPDF(x,tempInput);
+        OUT{idx_pair,1} = ZS_Grid2Plot(pdfFun,'mathematica',support(i, :),support(j, :));      
+        
     end
 end
 
-OUT{i+1} = levels';
-
-
-
+    function out = helper(uq_input,alpha,idxMax)
+        tempHDR = ZS_Grid.get_credible_interval(uq_input, alpha);
+        out = tempHDR.Support;
+        out = out(idxMax);
+    end
 
 end

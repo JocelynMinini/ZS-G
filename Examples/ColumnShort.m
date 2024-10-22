@@ -71,6 +71,10 @@ C0_Opts.optimOpts.UseVectorized  = true;
 
 try
 p = parpool(64);
+catch
+    try
+    p = parpool(8);
+    end
 end
 
 fprintf('\n\n')
@@ -111,7 +115,7 @@ while true
 
 end
 fprintf('\n\n')
-ZS_save('ColumnShort_analytical_01.mat',RES)
+ZS_save('ColumnShort_analytical_testMaxDegree.mat',RES)
 try
 delete(p)
 end

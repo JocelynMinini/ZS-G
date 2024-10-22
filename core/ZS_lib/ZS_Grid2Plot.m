@@ -1,4 +1,4 @@
-function [varargout] = ZS_Grid2Plot(M,software,varargin)
+function [varargout] = ZS_Grid2Plot(Model,software,varargin)
 
 software = lower(software);
 
@@ -15,7 +15,7 @@ end
 
 % Set up the grid
 tol = 0.01;
-n   = 100;
+n   = 200;
 switch d
     case 1
         x1Lim = varargin{1};
@@ -48,21 +48,21 @@ end
 
 idx = randi([1,size(X,1)],1,5);
 
-if isa(M,'uq_model')
-    f = M;
-elseif isa(M,'function_handle')
+if isa(Model,'uq_model')
+    f = Model;
+elseif isa(Model,'function_handle')
     try
-        temp = M(X(idx,:));
+        temp = Model(X(idx,:));
         is_vectorized = size(temp,1) > 1;
     catch me
         is_vectorized = 0;
     end
-    OPTS.mHandle = M;
+    OPTS.mHandle = Model;
     OPTS.isVectorized = logical(is_vectorized);
     f = uq_createModel(OPTS,'-private');
     clear OPTS
-elseif isa(M,'char')
-    OPTS.mString = M;
+elseif isa(Model,'char')
+    OPTS.mString = Model;
     f = uq_createModel(OPTS,'-private');
 end
 

@@ -68,11 +68,11 @@ switch method
                 int = int / mean(idx./pdf_val);
             case 'L2' % Normalized L2
                 int = sqrt(int) / sqrt(mean(idx./pdf_val));
-            otherwise
-                error("Type must be 'L1' or 'L2'")
         end
+
         L      = int;
         L_norm = int/ybar;
+        
     otherwise
         error("The field 'Method' must be 'Continous' or 'Discrete'.")
 end

@@ -38,20 +38,9 @@ RES.Sensitivity.Total = [0.0939423138908979 0.0808915901172997 0.050810811010593
 RES.Sensitivity.First = [0.0324554486667855 0.0166906352179432 0.0493452662462097 0.00773595576644696 0.830619618520388];
 
 %% Redefining the input
-keep = [1 2 5]; % keep these variables
-rmv  = setdiff(1:length(Input.Marginals),keep); % remove these
-
-OPTS.Marginals = Input.Marginals(keep);
-OPTS.Marginals = rmfield(OPTS.Marginals,{'Parameters','Bounds'});
-
-OPTS.Copula                   = Input.Copula;
-OPTS.Copula.Parameters(rmv,:) = [];
-OPTS.Copula.Parameters(:,rmv) = [];
-OPTS.Copula                   = rmfield(OPTS.Copula,'Variables');
-
-reducedInput = uq_createInput(OPTS,'-private');
-clear OPTS
-d = size(reducedInput.Marginals,2);
+keep         = [1 2 5]; % keep these variables
+reducedInput = ZS_reduceInput(Input,keep);
+d            = size(reducedInput.Marginals,2);
 
 %% Common options both analytical and FE
 metaType   = 'PCE';

@@ -20,6 +20,13 @@ Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
 
+% Cutoff function
+d = 2;
+OPTS.Marginals = uq_Marginals(d, 'Uniform', [0,2]);
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+count = count + 1;
+
 % Detpep10exp function
 d = 3;
 OPTS.Marginals = uq_Marginals(d, 'Uniform', [0,1]);

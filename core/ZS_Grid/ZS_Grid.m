@@ -270,8 +270,13 @@ methods (Static)
 
     if all(index)
 
-        support = param;
-        level   = NaN;
+        support      = param;
+        level        = NaN;
+        solver_ouput = NaN;
+        % Get the transformation matrices
+        X       = uq_getSample(uq_input,n);
+        [R,S,M] = ZS_Grid.get_Transform(uq_input,X);
+        
 
     else
 
@@ -361,7 +366,7 @@ methods (Static)
     if isequal(uq_input.Copula.Type,'Independent')
         R = eye(d);
     else
-        C       = cov(X_alpha);
+        C       = cov(tempX);
         %[R,~] = eig(C);
         var     = diag(C);
         [~,idx] = sort(var);
@@ -369,16 +374,22 @@ methods (Static)
         R       = R(:,idx);
     end
 
+    %scatter(tempX(:,1),tempX(:,2))
+    %hold on
+
     % Shift to [0]^d accord to the mean
     tempX = tempX-muX;
+    %scatter(tempX(:,1),tempX(:,2))
     
     % Rotate according to pca
     tempX = tempX*R;
+    %scatter(tempX(:,1),tempX(:,2))
 
     % Compute the offset for centering
     D      = ZS_Grid.get_Bounds(tempX);
     offset = (sum(D,2)/2)';
     tempX  = tempX-offset;
+    %scatter(tempX(:,1),tempX(:,2))
 
     % Compute the strech matrix
     D = ZS_Grid.get_Bounds(tempX);
