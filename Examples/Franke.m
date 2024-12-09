@@ -2,59 +2,116 @@ clc
 clear 
 ZS_G
 
-modelName = 'franke';
-mu = 10;
-
 Models = ZS_createModel_fun;
+Inputs = ZS_createInput_fun;
 
-OPTS.Marginals(1).Type       = 'Gaussian';
-OPTS.Marginals(1).Parameters = [0.5,0.1];
+trueModel = Models.franke;
+Input     = Inputs.franke;
 
-OPTS.Marginals(2).Type       = 'Lognormal';
-OPTS.Marginals(2).Moments    = [0.5,0.05];
+d  = 2;
+dx = [0 1 ; 0 1];
+replicates = 10;
+metaType = 'PCE';
+n = 100;
 
-%OPTS.Copula.Type = 'Gaussian';
-%OPTS.Copula.Parameters = [1 0.5; 0.5 1];
-
-Input = uq_createInput(OPTS,'-private');
-trueModel = Models.(modelName);
-
-
-[R_01,level01,~] = ZS_Grid.get_credible_interval(Input,0.01);
-[~,level05,~]    = ZS_Grid.get_credible_interval(Input,0.05);
-
-f   = @(x) uq_evalPDF(x,Input);
-PDF = ZS_Grid2Plot(f,'mathematica',R_01(1,:),R_01(1,:));
-levels = [level01,level05];
-
-opts.MetaType = 'PCE';
-opts.Model    = trueModel;
-opts.Input    = Input;
-opts.alpha    = 0.05;
-opts.mu       = 10;
-Replicates    = 1;
-PCOpts        = ZS_createPCOpts(opts,Replicates);
-
-
-MAT = {};
-ED  = {};
-
-
-MAT{end+1} = ZS_Grid2Plot(trueModel,'mathematica',[0 1],[0 1]);
-
-LOO = [];
-L1  = [];
-
-L1_Opts.Input    = Input;
-L1_Opts.NSamples = 10^5;
-L1_Opts.Type     = 'L1';
-L1_Opts.Level    = levels(1);
-
-for i = 1:4
-    PCE        = uq_createModel(PCOpts{i},'-private');
-    LOO(end+1) = PCE.Error.ModifiedLOO;
-    L1(end+1)  = ZS_get_L_norm(trueModel,PCE,L1_Opts);
-    MAT{end+1} = ZS_Grid2Plot(PCE,'mathematica',[0 1],[0 1]);
-    ED{end+1}  = [PCE.ExpDesign.X,PCE.ExpDesign.Y];
+for i = 1:d
+    OPTS.Marginals(i).Type = 'beta';
+    OPTS.Marginals(i).Parameters = [0.5 0.5 0 1];
 end
 
+betaInput = uq_createInput(OPTS,'-private');
+clear OPTS
+
+
+for i = 1:2*replicates
+
+    % General
+    OPTS{i}.Type     = 'Metamodel';
+    OPTS{i}.Display  = 'quiet';
+
+    % Input and true model
+    OPTS{i}.Input = Input;
+    OPTS{i}.FullModel = trueModel;
+
+    % Experimental design
+    if i < replicates
+        X_ED = uq_getSample(Input,n,'lhs');
+    else
+        X_ED = uq_getSample(betaInput,n,'lhs');
+    end
+    Y_ED = uq_evalModel(trueModel,X_ED);
+    OPTS{i}.ExpDesign.X = X_ED;
+    OPTS{i}.ExpDesign.Y = Y_ED;
+
+    % Validation set
+    valX = uq_getSample(Input,10^6);
+    valY = uq_evalModel(trueModel,valX);
+    OPTS{i}.ValidationSet.X = valX;
+    OPTS{i}.ValidationSet.Y = valY;
+
+
+    % Surrogate options
+    OPTS{i}.MetaType = metaType;
+
+    switch metaType
+
+        case 'PCE'
+
+            OPTS{i}.TruncOptions.qNorm = 1;
+            OPTS{i}.Degree             = 1:20;
+            OPTS{i}.DegreeEarlyStop    = false;
+
+            OPTS{i}.Method = 'OLS';
+
+        case 'Kriging'
+
+        case 'PCK'
+
+    end
+
+
+end
+
+
+N = length(OPTS);
+
+% Options for L1 norm
+L1_Opts.Method   = 'Continous';
+L1_Opts.Type     = 'L1';
+L1_Opts.Input    = Input;
+L1_Opts.NSamples = 10^5;
+
+% Options for C0 solver
+C0_Opts.Method                   = 'Continous';
+C0_Opts.Support                  = [0 1; 0 1];
+C0_Opts.Input                    = Input;
+C0_Opts.optimOpts.Display        = 'off';
+C0_Opts.optimOpts.SwarmSize      = 300;
+C0_Opts.optimOpts.UseVectorized  = true;
+
+L1  = zeros(N,1);
+LOO = L1;
+Val = L1;
+C0  = L1;
+XC0 = zeros(N,d);
+
+
+try
+p = parpool(64);
+catch
+    try
+    p = parpool(8);
+    end
+end
+
+for i = 1:N
+    disp(i)
+    PCE = uq_createModel(OPTS{i},'-private');
+
+    try
+        LOO(i) = PCE.Error.ModifiedLOO;
+    catch
+        LOO(i) = PCE.Error.LOO;
+    end
+    Val(i)           = PCE.Error.Val;
+end

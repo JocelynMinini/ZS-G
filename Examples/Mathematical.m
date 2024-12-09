@@ -6,12 +6,12 @@ addpath(genpath('C:\Users\jocelyn.minini\switchdrive\MetaG\4_MATLAB\ZS+G\Example
 warning ('off','all');
 
 % Replicates
-replicates = 10;
+replicates = 100;
 
 % Configure parallel execution
 if replicates > 1
     try
-        p = parpool(32);
+        p = parpool(64);
     catch
         try 
             p = parpool(8);
@@ -64,8 +64,14 @@ for i = 1:length(models) % Loop over the models
         
         fprintf('   - %s',familyName)
         fprintf(repmat(' ',1,12-length(familyName)))
+
+        try
+            tempRES = ZS_Bennchmark(currentModel,currentInput,currentFamily,currentBoundaries,replicates,metaOpts);
+        catch
+            tempRES = [];
+        end
         
-        RES.(modelNames{i}).(familyName) = ZS_Bennchmark(currentModel,currentInput,currentFamily,currentBoundaries,replicates,metaOpts);
+        RES.(modelNames{i}).(familyName) = tempRES;
 
         ZS_save("Mathematical.mat",RES)
 
@@ -73,6 +79,8 @@ for i = 1:length(models) % Loop over the models
     end
 
 end
+
+delete(p)
 
 
 

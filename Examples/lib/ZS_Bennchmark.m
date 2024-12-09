@@ -68,12 +68,18 @@ while true
         LOO = L1;
         XC0 = cell(N,1);
 
-        for i = 1:N
+        parfor i = 1:N
             PCE              = uq_createModel(surrogateOpts{i,j},'-private');
             LOO(i)           = PCE.Error.ModifiedLOO;
             L1(i)            = ZS_get_L_norm(uq_model,PCE,L1_Opts);
             [XC0{i,:},C0(i)] = ZS_get_C0(uq_model,PCE,C0_Opts);
         end
+
+        % In the rare case where LOO = inf
+        idx = isinf(LOO);
+        a = 1.1;
+        b = 5;
+        LOO(idx) = (a + (b-a).*rand(1))*max(LOO(~idx));
 
         RES.LOO.(['MU_',char(string(mu))])(:,j) = LOO;
         RES.L1.(['MU_',char(string(mu))])(:,j)  = L1;

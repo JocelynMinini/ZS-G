@@ -80,7 +80,7 @@ end
 fprintf('\n\n')
 fprintf('MU = ')
 
-mu = 1;
+mu = 6;
 while true
 
     N = ZS_SparseGrid.get_number_of_nodes(d,mu,@(k)2.*k-1);

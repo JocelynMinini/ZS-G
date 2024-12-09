@@ -117,6 +117,12 @@ Inputs.(names{count}) = uq_createInput(OPTS,'-private');
 clear OPTS
 count = count + 1;
 
+% schoebi
+d = 2;
+OPTS.Marginals = uq_Marginals(d, 'Uniform', [-5,5]);
+Inputs.(names{count}) = uq_createInput(OPTS,'-private');
+clear OPTS
+count = count + 1;
 
 
 % shortcolumn
